@@ -5,10 +5,19 @@
   if (!root) return;
   const body = document.body;
 
-  // ---- ligar o "modo toque": aparelhos de toque já de início; notebooks com tela de toque só depois do primeiro toque ----
-  const coarse = matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && 'ontouchstart' in window);
-  if (coarse) body.classList.add('touch');
-  addEventListener('pointerdown', e => { if (e.pointerType === 'touch') body.classList.add('touch'); }, true);
+  // ---- celular x desktop: decide pelo aparelho e depois pela ENTRADA que a pessoa está usando ----
+  // Começa em modo toque só em aparelhos que são mesmo celular/tablet. Depois: um toque na tela liga os controles
+  // de toque, e usar o mouse ou o teclado desliga (assim notebook com tela de toque funciona nos dois jeitos).
+  const ua = navigator.userAgent || '';
+  const isPhoneOrTablet = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)                       // iPad pedindo "site para computador"
+    || (matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches);   // só tem dedo como ponteiro
+  const setTouch = on => { if (body.classList.contains('touch') !== on) body.classList.toggle('touch', on); };
+  setTouch(isPhoneOrTablet);
+  addEventListener('pointerdown', e => { if (e.pointerType === 'touch' || e.pointerType === 'pen') setTouch(true); }, true);
+  addEventListener('pointermove', e => { if (e.pointerType === 'mouse') setTouch(false); }, true);
+  addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') setTouch(false); }, true);
+  addEventListener('keydown', e => { if (!e.repeat && !['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) setTouch(false); }, true);
   addEventListener('contextmenu', e => { if (body.classList.contains('touch')) e.preventDefault(); });
 
   // ---- teclas virtuais (soltar com atraso mínimo para o jogo não perder toques muito rápidos) ----

@@ -293,6 +293,10 @@ function resize() {
   const s = Math.min(innerWidth / VW, innerHeight / VH);
   canvas.style.width = VW * s + 'px';
   canvas.style.height = VH * s + 'px';
+  // ampliação em escala fracionária fica mais nítida suavizada; só em escala inteira mantém os pixels "duros"
+  canvas.style.imageRendering = Math.abs(s - Math.round(s)) < .01 ? 'pixelated' : 'auto';
+  // menus, diálogos e botões crescem junto com o monitor (1.0 até 2.2x), para não ficarem miúdos em telas grandes
+  document.documentElement.style.setProperty('--k', Math.max(1, Math.min(2.2, s)).toFixed(3));
 }
 addEventListener('resize', resize); resize();
 

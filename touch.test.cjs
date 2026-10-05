@@ -42,7 +42,7 @@ const assert = require('node:assert/strict');
 
   // ---------- Nature ----------
   await ev(() => { levelId = 'teresopolis'; show('playing'); player.wx = 727; player.wy = 633; promptBlocked = false; promptSign = null; checkOasisSign(); });
-  await page.locator('#btnYes').click();
+  await page.locator('#btnYes').tap();
   await page.waitForFunction(() => state === 'nature');
   await page.screenshot({ path: 'touch-nature-menu.png' });
   await ev(async () => { await beginChallenge('epi'); });
@@ -64,7 +64,7 @@ const assert = require('node:assert/strict');
 
   // ---------- Solar ----------
   await ev(() => { Hop.stop(); levelId = 'teresopolis'; show('playing'); player.wx = 854; player.wy = 702; promptBlocked = false; promptSign = null; checkOasisSign(); });
-  await page.locator('#btnYes').click(); await page.waitForFunction(() => state === 'splay');
+  await page.locator('#btnYes').tap(); await page.waitForFunction(() => state === 'splay');
   await page.waitForTimeout(3300);
   r.solarButtons = (await ev(() => [...document.querySelectorAll('.tbtn')].map(b => b.textContent).join(','))) === 'Pular,Bater,Esquiva,Lançar,Chuva';
   const sx0 = await ev(() => Solar._debug().x);

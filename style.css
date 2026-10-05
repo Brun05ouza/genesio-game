@@ -120,3 +120,10 @@ p.small{font-size:15px;opacity:.85;margin:0}
 #sOverlay [hidden]{display:none}
 
 #fOverlay{background:rgba(10,6,24,.66);z-index:4}
+
+/* ===== Telas grandes (desktop): a interface cresce com o monitor (--k vem do game.js) ===== */
+.screen:not(#menu):not(#settings):not(#serra):not(#desert):not(#rotate) > :not(.logo):not(.mstage):not(.sstage),
+#menu .corner,#menu .hint,.desert-box,#toast{zoom:var(--k,1)}
+#toast{top:calc(28px * var(--k,1))}
+.touch .screen:not(#menu):not(#settings):not(#serra):not(#desert) > :not(.logo){zoom:1}   /* celular: nada de zoom, só o ajuste compacto */
+.touch #menu .corner,.touch #menu .hint,.touch .desert-box,.touch #toast{zoom:1}
