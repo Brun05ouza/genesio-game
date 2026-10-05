@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b2418">
+<title>Genésio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="menu.css">
+<link rel="stylesheet" href="settings.css">
+<link rel="stylesheet" href="touch.css">
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+
+<div id="ui">
+  <!-- carregamento -->
+  <section id="loading" class="screen active">
+    <div class="logo small">GENÉSIO</div>
+    <div class="bar"><div id="barFill"></div></div>
+    <p id="loadText">Carregando... 0%</p>
+  </section>
+
+  <!-- menu principal: arte + animações por cima (os botões da arte são áreas clicáveis) -->
+  <section id="menu" class="screen">
+    <div class="mstage" id="mstage">
+      <img class="mbg" src="assets/menu-bg.jpg" alt="Genésio — Uma aventura pela cidade" draggable="false">
+      <div class="sunglow"></div>
+      <div class="sunrays"></div>
+      <div class="mg mg-a" data-k="a" style="left:7.057%;top:16.472%;width:12.679%;--delay:0s;--dur:2.6s;--amp:1.0cqw;--r0:-1.6deg;--r1:1.8deg">
+        <img class="g-open" src="assets/menu-g-a.png" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-a-blink.png" alt="" draggable="false">
+      </div>
+      <div class="mg mg-b" data-k="b" style="left:43.242%;top:17.003%;width:15.550%;--delay:-.4s;--dur:2.0s;--amp:1.6cqw;--r0:-2.2deg;--r1:2.2deg">
+        <img class="g-open" src="assets/menu-g-b.png" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-b-blink.png" alt="" draggable="false">
+      </div>
+      <div class="mg mg-c" data-k="c" style="left:88.098%;top:22.742%;width:10.347%;--delay:-.9s;--dur:2.9s;--amp:1.1cqw;--r0:-2.5deg;--r1:2.5deg">
+        <img class="g-open" src="assets/menu-g-c.png" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-c-blink.png" alt="" draggable="false">
+      </div>
+      <div class="mg mg-d" data-k="d" style="left:17.404%;top:68.332%;width:14.773%;--delay:-1.2s;--dur:1.7s;--amp:1.3cqw;--r0:-3deg;--r1:1.2deg">
+        <img class="g-open" src="assets/menu-g-d.png" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-d-blink.png" alt="" draggable="false">
+      </div>
+      <div class="mg mg-e" data-k="e" style="left:77.871%;top:71.626%;width:10.048%;--delay:-.6s;--dur:2.3s;--amp:0.9cqw;--r0:-1.5deg;--r1:2deg">
+        <img class="g-open" src="assets/menu-g-e.png" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-e-blink.png" alt="" draggable="false">
+      </div>
+      <div class="tshine"></div>
+      <canvas id="mfx" width="1672" height="941"></canvas>
+      <div class="sweep"></div>
+      <div class="resume">▶ Continuar</div>
+      <button id="btnStart" class="mhot start" aria-label="Começar">Começar</button>
+      <button id="btnSettings" class="mhot sett" aria-label="Configurações">Configurações</button>
+    </div>
+    <div class="corner">
+      <button id="btnMusic" class="icon" title="Música">🎵</button>
+      <button id="btnSfx" class="icon" title="Efeitos sonoros">🔊</button>
+    </div>
+    <p class="hint">WASD andar · Shift correr · Espaço pular · Esc menu</p>
+  </section>
+
+  <!-- configurações: arte animada + painel real por cima -->
+  <section id="settings" class="screen">
+    <div class="sstage" id="sstage">
+      <img class="sbg" src="assets/settings-bg.jpg" alt="Configurações" draggable="false">
+      <div class="ssun"></div>
+      <div class="srays"></div>
+      <canvas id="sfx" width="1764" height="892"></canvas>
+      <div class="spanel">
+        <div class="srow r1" style="top:22%"><span class="lbl">Música</span><input type="range" id="volMusic" min="0" max="100"><button id="muteMusic" class="icon" title="Música"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 5.5a9 9 0 0 1 0 13" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>
+        <div class="srow r2" style="top:51.6%"><span class="lbl">Efeitos</span><input type="range" id="volSfx" min="0" max="100"><button id="muteSfx" class="icon" title="Efeitos sonoros"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 5.5a9 9 0 0 1 0 13" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>
+        <div class="srow r3" style="top:79.6%"><span class="lbl">Tela cheia</span><button id="btnFull" class="sbtn">Alternar</button></div>
+      </div>
+      <button id="btnBack" class="mhot" aria-label="Voltar">Voltar</button>
+    </div>
+  </section>
+
+  <!-- carregamento da fase (deserto) -->
+  <section id="desert" class="screen">
+    <div class="sun"></div>
+    <div class="dune d1"></div>
+    <div class="dune d2"></div>
+    <svg class="cactus" viewBox="0 0 60 120" aria-hidden="true">
+      <g fill="#2f8f4a" stroke="#0d3a1e" stroke-width="4" stroke-linejoin="round">
+        <rect x="22" y="8" width="18" height="108" rx="9"/>
+        <path d="M22 60H12a6 6 0 0 1-6-6V38a6 6 0 0 1 12 0v10h4z"/>
+        <path d="M40 78h8a6 6 0 0 0 6-6V52a6 6 0 0 0-12 0v14h-2z"/>
+      </g>
+    </svg>
+    <div class="weed"></div>
+    <div class="desert-box">
+      <div class="logo small" id="desertTitle">Nova Iguaçu</div>
+      <div class="bar"><div id="desertFill"></div></div>
+      <p id="desertText">Carregando...</p>
+    </div>
+  </section>
+
+  <!-- pergunta ao chegar na placa -->
+  <section id="prompt" class="screen">
+    <div class="panel dialog">
+      <h2 id="promptText">Iniciar Fase<br>Oásis Residencial?</h2>
+      <div class="dialog-btns">
+        <button id="btnYes" class="btn primary">Sim</button>
+        <button id="btnNo" class="btn">Não</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- lobby do Oásis -->
+  <section id="oasis" class="screen stage">
+    <img class="mascot2" alt="" src="frames/idle0.png">
+    <h1 class="logo">OÁSIS</h1>
+    <p class="tagline">Residencial · Corrida no deserto</p>
+    <div class="buttons">
+      <button id="btnOasisStart" class="btn primary">Start</button>
+      <button id="btnOasisBack" class="btn">Voltar</button>
+    </div>
+    <p class="hint">Espaço / W / ↑ para pular os cactos</p>
+  </section>
+
+  <!-- dificuldade -->
+  <section id="difficulty" class="screen stage">
+    <h2 class="logo small">Dificuldade</h2>
+    <div class="buttons">
+      <button class="btn diff" data-diff="facil">Fácil<small id="best-facil"></small></button>
+      <button class="btn diff primary" data-diff="normal">Normal<small id="best-normal"></small></button>
+      <button class="btn diff hard" data-diff="dificil">Difícil<small id="best-dificil"></small></button>
+      <button id="btnDiffBack" class="btn small">Voltar</button>
+    </div>
+  </section>
+
+  <!-- Nature: escolha do desafio -->
+  <section id="nature" class="screen natstage">
+    <h1 class="logo">NATURE</h1>
+    <p class="tagline">Desafios na mata · <span id="natCoins">0</span> 🪙 GenesisCoins</p>
+    <div class="cards">
+      <button class="card" data-challenge="epi">
+        <img src="fase-teresopolis/nature/card1.jpg" alt="">
+        <b>Desafio 1</b><span>Pegue os EPIs</span><small>8 itens · 60 s · o tempo acelera · <em id="natBest-epi"></em></small>
+      </button>
+      <button class="card" data-challenge="climb">
+        <img src="fase-teresopolis/nature/card2.jpg" alt="">
+        <b>Desafio 2</b><span>Torre de moedas</span><small>sem tempo · 5 vidas · <em id="natBest-climb"></em></small>
+      </button>
+      <button class="card" data-challenge="hop">
+        <img src="fase-teresopolis/nature/card3.jpg" alt="">
+        <b>Desafio 3</b><span>Subida infinita</span><small>pule sozinho · só A/D · <em id="natBest-hop"></em></small>
+      </button>
+      <div class="card locked"><img src="fase-teresopolis/nature/card4.jpg" alt=""><b>Desafio 4</b><span>Em breve</span><small>🔒</small></div>
+    </div>
+    <button id="btnNatureBack" class="btn">Voltar</button>
+  </section>
+
+  <!-- Nature: torre (pausa / resultado com conversão de moedas) -->
+  <section id="kOverlay" class="screen">
+    <div class="panel dialog">
+      <h2 id="kTitle">Pausado</h2>
+      <p id="kInfo"></p>
+      <div id="kConvert" class="convert">
+        <img src="frames/fly0.png" alt="" class="cg">
+        <span class="cx">× <b id="kN">0</b></span>
+        <span class="arrow">➜</span>
+        <span class="cx">🪙 <b id="kG">0</b></span>
+      </div>
+      <p id="kBonus" class="small"></p>
+      <div class="dialog-btns col">
+        <button id="kPrimary" class="btn primary">Continuar</button>
+        <button id="kEnd" class="btn">Encerrar e converter moedas</button>
+        <button id="kChallenges" class="btn">Escolher desafio</button>
+        <button id="kExit" class="btn">Sair para Teresópolis</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Nature: subida infinita (pausa / fim) -->
+  <section id="hOverlay" class="screen">
+    <div class="panel dialog">
+      <h2 id="hTitle">Pausado</h2>
+      <p id="hInfo"></p>
+      <div class="dialog-btns col">
+        <button id="hPrimary" class="btn primary">Continuar</button>
+        <button id="hChallenges" class="btn">Escolher desafio</button>
+        <button id="hExit" class="btn">Sair para Teresópolis</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Nature: pausa / resultado -->
+  <section id="nOverlay" class="screen">
+    <div class="panel dialog">
+      <h2 id="nTitle">Pausado</h2>
+      <p id="nInfo"></p>
+      <div class="dialog-btns col">
+        <button id="nPrimary" class="btn primary">Continuar</button>
+        <button id="nChallenges" class="btn">Escolher desafio</button>
+        <button id="nExit" class="btn">Sair para Teresópolis</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- pausa / fim de jogo da corrida -->
+  <section id="rOverlay" class="screen">
+    <div class="panel dialog">
+      <h2 id="rTitle">Pausado</h2>
+      <p id="rInfo"></p>
+      <div class="dialog-btns col">
+        <button id="rPrimary" class="btn primary">Continuar</button>
+        <button id="rDiff" class="btn">Mudar dificuldade</button>
+        <button id="rExit" class="btn">Sair para Nova Iguaçu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- carregamento de Teresópolis (imagem com barra de progresso por cima) -->
+  <section id="serra" class="screen">
+    <div class="serra-stage">
+      <img src="assets/teresopolis-loading.jpg" alt="">
+      <div class="serra-bar"><div id="serraFill"></div></div>
+      <p id="serraText">Carregando...</p>
+    </div>
+  </section>
+
+  <section id="sOverlay" class="screen" role="dialog" aria-labelledby="sTitle">
+    <div class="panel dialog">
+      <h2 id="sTitle">Pausado</h2>
+      <p id="sInfo"></p>
+      <p class="small">A/D: mover · Espaço: pular · S + Espaço: descer<br>Shift: esquivar com imunidade · J ou clique: bater<br>C: toque para lançar à frente<br>Segure C para carregar, mire com o mouse e solte C<br>Sair pelo menu volta para Teresópolis (o progresso da fase se perde).</p>
+      <div class="dialog-btns col">
+        <button id="sPrimary" class="btn primary">Continuar</button>
+        <button id="sRestart" class="btn" hidden>Recomeçar o percurso</button>
+        <button id="sExit" class="btn">Sair para Teresópolis</button>
+      </div>
+    </div>
+  </section>
+  <section id="fOverlay" class="screen" role="dialog" aria-labelledby="fTitle">
+    <div class="panel dialog">
+      <h2 id="fTitle">Pausado</h2>
+      <p id="fInfo"></p>
+      <p class="small">Espaço / W / ↑ / clique: impulso · cada pilar ultrapassado vale 1 ponto</p>
+      <div class="dialog-btns col">
+        <button id="fPrimary" class="btn primary">Continuar</button>
+        <button id="fExit" class="btn">Sair para Teresópolis</button>
+      </div>
+    </div>
+  </section>
+  <!-- controles de toque (só aparecem no celular, no lobby, no Nature e no Solar do Bosque) -->
+  <div id="touch">
+    <div class="joy-zone"><div class="joy-idle"></div><div class="joy-base"><div class="joy-knob"></div></div></div>
+    <div class="btns"></div>
+  </div>
+  <div id="toast"></div>
+  <button id="btnPause" class="icon hud" title="Menu (Esc)">☰</button>
+</div>
+
+<div id="rotate"><div class="phone"></div>Gire o aparelho para jogar na horizontal</div>
+
+<script src="audio.js"></script>
+<script src="runner.js"></script>
+<script src="nature.js"></script>
+<script src="tower-data.js"></script>
+<script src="climb.js"></script>
+<script src="hop-data.js"></script>
+<script src="hop.js"></script>
+<script src="solar-data.js"></script>
+<script src="solar.js"></script>
+<script src="flow-data.js"></script>
+<script src="flow.js"></script>
+<script src="game.js"></script>
+<script src="menu.js"></script>
+<script src="settings.js"></script>
+<script src="touch.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+/* ===== Celular: joystick, botões e telas compactas ===== */
+html,body{touch-action:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none}
+body{height:100dvh}
+button,.btn,.card,.icon{touch-action:manipulation}
+
+#touch{position:absolute;inset:0;z-index:3;display:none;pointer-events:none;--u:min(.68vw,1.35vh)}
+#touch.show{display:block}
+#touch .joy-zone{position:absolute;left:0;top:22%;width:46%;bottom:0;pointer-events:auto;touch-action:none}
+.joy-idle,.joy-base{position:absolute;border-radius:50%;pointer-events:none}
+.joy-base{transform:translate(-50%,-50%)}
+.joy-idle{left:calc(var(--u) * 17);bottom:calc(var(--u) * 5);transform:translate(-50%,0);width:calc(var(--u) * 17);height:calc(var(--u) * 17);
+  border:3px dashed rgba(255,255,255,.35);background:rgba(255,255,255,.07);transition:opacity .15s}
+.joy-base{display:none;width:calc(var(--u) * 19);height:calc(var(--u) * 19);background:rgba(255,255,255,.14);border:3px solid rgba(255,255,255,.5);box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.joy-base.on{display:block}
+.joy-knob{position:absolute;left:50%;top:50%;width:46%;height:46%;margin:-23% 0 0 -23%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#bfe9d3 55%,#5cc494);border:3px solid rgba(8,21,15,.7);box-shadow:0 3px 8px rgba(0,0,0,.4)}
+
+.tbtn{position:absolute;pointer-events:auto;touch-action:none;border-radius:50%;border:3px solid rgba(8,21,15,.75);background:rgba(47,143,99,.78);color:#fff;font:700 clamp(11px,calc(var(--u) * 3.3),17px)/1.1 'Fredoka',sans-serif;
+  display:grid;place-items:center;padding:0;box-shadow:0 4px 0 rgba(8,21,15,.65),0 0 0 2px rgba(255,255,255,.18) inset;text-shadow:0 2px 0 rgba(0,0,0,.45);-webkit-user-select:none;user-select:none}
+.tbtn.on{transform:translateY(3px) scale(.95);background:rgba(92,196,148,.95);box-shadow:0 1px 0 rgba(8,21,15,.65)}
+.b-jump{right:calc(var(--u) * 3);bottom:calc(var(--u) * 4);width:calc(var(--u) * 17);height:calc(var(--u) * 17);background:rgba(242,182,50,.85);color:#2a1d05;text-shadow:none;font-size:clamp(13px,calc(var(--u) * 3.6),20px)}
+.b-run{right:calc(var(--u) * 23);bottom:calc(var(--u) * 5);width:calc(var(--u) * 13);height:calc(var(--u) * 13)}
+.b-atk{right:calc(var(--u) * 22);bottom:calc(var(--u) * 5);width:calc(var(--u) * 15);height:calc(var(--u) * 15);background:rgba(200,70,50,.85)}
+.b-dodge{right:calc(var(--u) * 3);bottom:calc(var(--u) * 23);width:calc(var(--u) * 13);height:calc(var(--u) * 13);background:rgba(60,160,220,.82)}
+.b-throw{right:calc(var(--u) * 19);bottom:calc(var(--u) * 22);width:calc(var(--u) * 12);height:calc(var(--u) * 12);background:rgba(120,100,200,.82)}
+.b-special{right:calc(var(--u) * 39);bottom:calc(var(--u) * 7);width:calc(var(--u) * 11);height:calc(var(--u) * 11);background:rgba(255,206,70,.88);color:#2a1d05;text-shadow:none}
+
+/* botão de pausa um pouco maior e longe da borda curva */
+.touch .hud{width:48px;height:48px;left:max(14px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top))}
+.touch .hint{display:none}
+.touch #sOverlay p.small,.touch #fOverlay p.small,.touch #hOverlay p.small{display:none}
+
+/* aviso para girar o aparelho */
+#rotate{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#0b2418;color:#fff;font:700 22px 'Fredoka',sans-serif;text-align:center;padding:24px}
+#rotate .phone{width:54px;height:92px;border:5px solid #fff;border-radius:12px;animation:rot 2.2s ease-in-out infinite}
+@keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait){body.touch #rotate{display:flex}}
+
+/* telas e diálogos compactos em celular deitado */
+@media (max-height:540px){
+  .screen{gap:8px}
+  .logo{font-size:clamp(34px,13vh,72px);-webkit-text-stroke:2px var(--ink);text-shadow:0 3px 0 var(--g2),0 6px 0 var(--g3),0 10px 14px rgba(0,0,0,.5)}
+  .logo.small{font-size:clamp(26px,9vh,46px)}
+  .tagline{font-size:14px;margin:0 0 4px}
+  .btn{font-size:17px;padding:7px 18px;border-radius:12px;box-shadow:0 4px 0 var(--ink)}
+  .btn.primary{font-size:21px}
+  .btn.small{font-size:14px;padding:5px 12px}
+  .buttons{gap:8px;width:min(260px,60vw)}
+  .panel{padding:12px 16px;gap:10px;max-height:94vh;overflow:auto}
+  .dialog{padding:14px 20px;gap:8px}
+  .dialog h2{font-size:22px}
+  .dialog p{font-size:15px;line-height:1.35}
+  .dialog-btns{gap:10px}
+  .convert{font-size:24px;margin:0}.convert .cg{height:46px}
+  #mascot,.mascot2{height:17vh}
+  .cards{gap:8px}
+  .card{width:min(190px,22vw);padding:5px 5px 7px}
+  .card img{height:clamp(42px,15vh,70px)}
+  .card b{font-size:14px}.card span{font-size:13px}.card small{font-size:10px}
+  .row{font-size:17px}.row span{width:84px}
+  .corner{right:12px;bottom:10px}.icon{width:40px;height:40px;font-size:18px}
+  #toast{top:10px;padding:7px 16px;font-size:16px}
+}
+@media (max-height:380px){
+  .card img{display:none}
+  .logo{font-size:clamp(28px,12vh,48px)}
+}

@@ -1,0 +1,38 @@
+/* ===== Configurações: arte de fundo animada + painel real por cima ===== */
+#settings{background:#0b2a16;overflow:hidden;padding:0;gap:0}
+.sstage{position:absolute;left:50%;top:50%;width:max(100vw,calc(100vh * 1764 / 892));aspect-ratio:1764/892;transform:translate(-50%,-50%);container-type:inline-size;user-select:none}
+.sstage>*{position:absolute}
+.sstage canvas{transform:none;image-rendering:auto;left:0;top:0}
+.sbg{inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.sglcv,#sfx{inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.ssun{inset:0;pointer-events:none;mix-blend-mode:screen;background:radial-gradient(circle at 88% -6%,rgba(255,252,225,.8) 0,rgba(255,244,185,.3) 16%,transparent 44%);animation:sglow 6s ease-in-out infinite alternate}
+@keyframes sglow{from{opacity:.5}to{opacity:1}}
+.srays{inset:-5% -5% 0 -5%;pointer-events:none;mix-blend-mode:screen;opacity:.4;transform-origin:88% -6%;
+  background:repeating-conic-gradient(from 190deg at 88% -6%,rgba(255,248,205,.45) 0 2.4deg,rgba(255,248,205,0) 2.4deg 7deg);
+  -webkit-mask-image:radial-gradient(ellipse 80% 80% at 88% -6%,#000 0,rgba(0,0,0,.45) 45%,transparent 75%);mask-image:radial-gradient(ellipse 80% 80% at 88% -6%,#000 0,rgba(0,0,0,.45) 45%,transparent 75%);
+  animation:srays 12s ease-in-out infinite alternate}
+@keyframes srays{0%{transform:rotate(-2deg);opacity:.25}50%{opacity:.5}100%{transform:rotate(2deg);opacity:.32}}
+/* painel (cobre exatamente o painel desenhado na arte) */
+.spanel{left:33.45%;top:36.1%;width:33.2%;height:27.4%;border-radius:1.6cqw;background:linear-gradient(#063a22,#04301c);box-shadow:0 .5cqw 1.4cqw rgba(0,0,0,.35);color:#fff;font-family:'Fredoka',sans-serif}
+.srow{position:absolute;left:0;right:0;height:0;display:block}
+.srow>*{position:absolute;transform:translateY(-50%)}
+.srow .lbl{left:5.4%;font-weight:700;font-size:1.9cqw;color:#fff;white-space:nowrap}
+.srow input[type=range]{left:31.5%;width:50.5%;height:2.4cqw;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer;--v:50%}
+.srow input[type=range]::-webkit-slider-runnable-track{height:.46cqw;border-radius:.4cqw;background:linear-gradient(to right,#f4b631 var(--v),#3b4a40 var(--v))}
+.srow input[type=range]::-moz-range-track{height:.46cqw;border-radius:.4cqw;background:#3b4a40}
+.srow input[type=range]::-moz-range-progress{height:.46cqw;border-radius:.4cqw;background:#f4b631}
+.srow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:1.05cqw;height:1.05cqw;margin-top:-.3cqw;border-radius:50%;background:#f7b92f;border:.18cqw solid #8a5a0c;box-shadow:0 .1cqw .3cqw rgba(0,0,0,.5)}
+.srow input[type=range]::-moz-range-thumb{width:1.05cqw;height:1.05cqw;border-radius:50%;background:#f7b92f;border:.18cqw solid #8a5a0c}
+.srow .icon{left:86.2%;width:2.62cqw;height:2.62cqw;padding:0;border:0;border-radius:.6cqw;background:#3fa56a;box-shadow:none;display:grid;place-items:center;color:#fff;font-size:0;cursor:pointer}
+.srow .icon:hover{background:#4fbf7d}
+.srow .icon svg{width:62%;height:62%}
+.srow .icon.off{background:#a04a4a;opacity:1}
+.srow .icon.off::after{left:18%;right:18%;height:.28cqw}
+.srow .sbtn{left:5.8%;padding:.45cqw 1.5cqw;border:0;border-radius:.6cqw;background:#3fb16b;color:#fff;font:700 1.7cqw 'Fredoka',sans-serif;cursor:pointer;box-shadow:inset 0 -.18cqw 0 rgba(0,0,0,.18)}
+.srow .sbtn:hover{background:#52c97f}
+.srow.r3 .lbl{left:5.4%}
+.srow.r3 .sbtn{left:36%}
+/* "Voltar" da arte como área clicável */
+#settings #btnBack.mhot{left:45.2%;top:65.9%;width:9.7%;height:8.1%;border-radius:1.5cqw;font-size:0;color:transparent;background:transparent;border:0;box-shadow:none;padding:0;position:absolute;margin:0;transform:none;cursor:pointer}
+#settings #btnBack.mhot:hover,#settings #btnBack.mhot:focus-visible{background:rgba(255,255,255,.16);box-shadow:0 0 0 .22cqw rgba(255,255,255,.85),0 0 1.8cqw .5cqw rgba(255,226,120,.75);outline:none}
+#settings #btnBack.mhot:active{transform:translateY(.25cqw)}

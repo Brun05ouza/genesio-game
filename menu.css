@@ -1,0 +1,41 @@
+/* ===== Menu principal: arte + animações ===== */
+#menu{background:#0b2a16;overflow:hidden;backdrop-filter:none;padding:0}
+.mstage{position:absolute;left:50%;top:50%;width:max(100vw,calc(100vh * 1672 / 941));aspect-ratio:1672/941;transform:translate(-50%,-50%);container-type:inline-size;user-select:none}
+.mstage>*{position:absolute}
+.mbg{inset:0;width:100%;height:100%;display:block;pointer-events:none}
+/* luz do sol (canto superior direito) */
+.sunglow{inset:0;background:radial-gradient(circle at 90% -3%,rgba(255,252,225,.95) 0,rgba(255,244,185,.42) 14%,rgba(255,236,150,.12) 34%,transparent 52%);mix-blend-mode:screen;pointer-events:none;animation:glow 5.5s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.55;transform:scale(1)}to{opacity:1;transform:scale(1.06)}}
+.sunrays{inset:-5% -5% 0 -5%;pointer-events:none;mix-blend-mode:screen;opacity:.5;transform-origin:92% -3%;
+  background:repeating-conic-gradient(from 188deg at 92% -3%,rgba(255,248,205,.5) 0 2.2deg,rgba(255,248,205,0) 2.2deg 6.5deg);
+  -webkit-mask-image:radial-gradient(ellipse 85% 85% at 92% -3%,#000 0,rgba(0,0,0,.5) 45%,transparent 78%);mask-image:radial-gradient(ellipse 85% 85% at 92% -3%,#000 0,rgba(0,0,0,.5) 45%,transparent 78%);
+  animation:rays 11s ease-in-out infinite alternate}
+@keyframes rays{0%{transform:rotate(-2.5deg);opacity:.32}50%{opacity:.62}100%{transform:rotate(2.5deg);opacity:.4}}
+.sweep{inset:0;pointer-events:none;mix-blend-mode:soft-light;background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.55) 50%,transparent 62%);background-size:260% 100%;background-position:130% 0;animation:sweep 9s ease-in-out infinite}
+@keyframes sweep{0%,18%{background-position:140% 0}70%,100%{background-position:-40% 0}}
+.tshine{left:30.8%;top:42.2%;width:39%;height:14.5%;pointer-events:none;mix-blend-mode:overlay;background:linear-gradient(100deg,transparent 38%,rgba(255,255,255,.9) 50%,transparent 62%);background-size:260% 100%;background-position:140% 0;animation:tshine 6.5s linear infinite;border-radius:3cqw}
+@keyframes tshine{0%,45%{background-position:140% 0}100%{background-position:-40% 0}}
+#mfx{inset:0;width:100%;height:100%;pointer-events:none}
+/* Genésios */
+.mg{transform-origin:50% 96%;pointer-events:auto;cursor:pointer;animation:bob var(--dur,2.4s) ease-in-out var(--delay,0s) infinite;filter:drop-shadow(0 .5cqw .5cqw rgba(0,0,0,.22));will-change:transform}
+.mg img{position:absolute;left:0;top:0;width:100%;height:auto;display:block;pointer-events:none;-webkit-user-drag:none}
+.mg img.g-open{position:relative}
+.mg .g-blink{opacity:0}
+.mg.blinking .g-blink{opacity:1}.mg.blinking .g-open{opacity:0}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(var(--r0,-1.5deg)) scale(1.025,.975)}48%{transform:translateY(calc(var(--amp,1cqw) * -1)) rotate(var(--r1,2deg)) scale(.985,1.02)}}
+.mg.hop{animation:hop .75s cubic-bezier(.3,.7,.4,1)}
+@keyframes hop{0%{transform:translateY(0) scale(1.1,.88)}30%{transform:translateY(-6.5cqw) rotate(-7deg) scale(.94,1.1)}62%{transform:translateY(0) rotate(3deg) scale(1.08,.92)}80%{transform:translateY(-1cqw) scale(.99,1.02)}100%{transform:translateY(0) scale(1,1)}}
+/* botões da arte */
+.mhot{border:0;background:transparent;color:transparent;font-size:0;cursor:pointer;border-radius:3.4cqw;padding:0;outline:none;transition:box-shadow .15s,background .15s,transform .08s}
+.mhot.start{left:37.9%;top:63.9%;width:24.9%;height:9.7%;animation:pulseBtn 2.6s ease-in-out infinite}
+.mhot.sett{left:38.9%;top:74.3%;width:22.9%;height:8.4%}
+@keyframes pulseBtn{0%,100%{box-shadow:0 0 0 0 rgba(255,214,90,0)}50%{box-shadow:0 0 2.2cqw .5cqw rgba(255,214,90,.5)}}
+.mhot:hover,.mhot:focus-visible{background:rgba(255,255,255,.16);box-shadow:0 0 0 .28cqw rgba(255,255,255,.85),0 0 2.4cqw .8cqw rgba(255,226,120,.8);animation:none}
+.mhot:active{transform:translateY(.3cqw) scale(.992);background:rgba(0,0,0,.12)}
+.resume{left:37.9%;top:63.9%;width:24.9%;height:9.7%;display:none;align-items:center;justify-content:center;pointer-events:none;border-radius:3.4cqw;
+  background:linear-gradient(#ffd84a,#f3a91c);border:.35cqw solid #1a3a22;font:700 3.6cqw 'Fredoka',sans-serif;color:#2a1d05;box-shadow:inset 0 .5cqw 0 rgba(255,255,255,.5)}
+#menu.started .resume{display:flex}
+#menu .hint{z-index:2}
+#menu .corner{z-index:3}
+.mgl{inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.mstage canvas{transform:none;image-rendering:auto;left:0;top:0}

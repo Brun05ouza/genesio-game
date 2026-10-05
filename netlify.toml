@@ -1,0 +1,22 @@
+# Site estático: o Netlify publica só a pasta dist/ (gerada por build-dist.py), sem etapa de build.
+[build]
+  publish = "dist"
+
+# HTML/JS/CSS sempre revalidam (você atualiza o jogo e todo mundo recebe a versão nova);
+# imagens ficam em cache por 1 dia para a primeira carga ser rápida nas visitas seguintes.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
