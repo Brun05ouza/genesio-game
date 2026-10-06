@@ -280,10 +280,15 @@
   </div>
   <div id="iosHelp" hidden>
     <div class="panel dialog">
-      <h2>Instalar no iPhone / iPad</h2>
-      <p>1. Toque em <b>Compartilhar</b> <span class="ico-share">⬆︎</span> na barra do Safari.<br>2. Escolha <b>Adicionar à Tela de Início</b>.<br>3. Toque em <b>Adicionar</b>. Pronto: o jogo abre como um app, em tela cheia.</p>
-      <button id="iosHelpOk" class="btn primary">Entendi</button>
+      <h2 id="iosTitle">Instalar no iPhone</h2>
+      <ol id="iosSteps"></ol>
+      <p id="iosNote" class="small"></p>
+      <div class="dialog-btns">
+        <button id="iosCopy" class="btn" hidden>Copiar link</button>
+        <button id="iosHelpOk" class="btn primary">Entendi</button>
+      </div>
     </div>
+    <div id="iosArrow" hidden><span>Toque aqui</span><b>⬇</b></div>
   </div>
   <div id="errBar" hidden>
     <span id="errMsg"></span>

@@ -136,7 +136,7 @@ p.small{font-size:15px;opacity:.85;margin:0}
 #lvload.err #lvText{color:#ffb0a0}
 
 /* ===== app instalável ===== */
-#installBar,#errBar{position:fixed;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:12px;max-width:min(92vw,720px);padding:10px 14px;border-radius:14px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink),0 10px 24px rgba(0,0,0,.4);color:#fff;font:600 15px/1.25 'Fredoka',sans-serif;pointer-events:auto}
+#installBar,#errBar{position:fixed;width:max-content;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:12px;max-width:min(92vw,720px);padding:10px 14px;border-radius:14px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink),0 10px 24px rgba(0,0,0,.4);color:#fff;font:600 15px/1.25 'Fredoka',sans-serif;pointer-events:auto}
 #installBar{top:max(10px,env(safe-area-inset-top));background:rgba(8,40,26,.96)}
 #errBar{bottom:max(10px,env(safe-area-inset-bottom));background:rgba(90,22,16,.96)}
 #installBar[hidden],#errBar[hidden],#iosHelp[hidden],#btnInstall[hidden]{display:none}
@@ -147,3 +147,15 @@ p.small{font-size:15px;opacity:.85;margin:0}
 .ico-share{display:inline-block;border:2px solid #fff;border-radius:6px;padding:0 6px;font-size:.9em}
 body.app #installBar,body.app #btnInstall{display:none}
 @media (max-height:480px){#installBar,#errBar{font-size:13px;padding:6px 10px}#installBar .icon,#errBar .icon{width:28px;height:28px}}
+
+#iosHelp ol{margin:0;padding-left:1.3em;text-align:left;font:600 16px/1.45 'Fredoka',sans-serif;display:flex;flex-direction:column;gap:6px}
+#iosHelp .small{margin:0;font-size:13px;opacity:.85;max-width:38ch}
+#iosHelp .dialog-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#iosArrow{position:fixed;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;color:#ffe28a;font:700 16px 'Fredoka',sans-serif;text-shadow:0 2px 0 #000;pointer-events:none;animation:bob 1s ease-in-out infinite}
+#iosArrow b{font-size:42px;line-height:1}
+#iosArrow.bottom{bottom:max(6px,env(safe-area-inset-bottom))}
+#iosArrow.top{top:6px;left:auto;right:8px;transform:none;flex-direction:column-reverse}
+#iosArrow.top b{transform:rotate(180deg)}
+#iosArrow[hidden]{display:none}
+@keyframes bob{50%{translate:0 8px}}
+@media (orientation:landscape){#iosArrow{display:none}}
