@@ -6,6 +6,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0b2418">
+<meta name="apple-mobile-web-app-title" content="Genésio">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Genésio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
@@ -59,6 +65,7 @@
       <button id="btnSettings" class="mhot sett" aria-label="Configurações">Configurações</button>
     </div>
     <div class="corner">
+      <button id="btnInstall" class="icon" title="Instalar o app" aria-label="Instalar o app" hidden>📲</button>
       <button id="btnMusic" class="icon" title="Música">🎵</button>
       <button id="btnSfx" class="icon" title="Efeitos sonoros">🔊</button>
     </div>
@@ -78,6 +85,17 @@
         <div class="srow r3" style="top:79.6%"><span class="lbl">Tela cheia</span><button id="btnFull" class="sbtn">Alternar</button></div>
       </div>
       <button id="btnBack" class="mhot" aria-label="Voltar">Voltar</button>
+    </div>
+  </section>
+
+  <!-- carregamento de uma fase (com progresso e botão de tentar de novo) -->
+  <section id="lvload" class="screen">
+    <div class="logo small" id="lvTitle">Carregando...</div>
+    <div class="bar"><div id="lvFill"></div></div>
+    <p id="lvText">Baixando... 0%</p>
+    <div class="dialog-btns" id="lvErr" hidden>
+      <button id="lvRetry" class="btn primary">Tentar de novo</button>
+      <button id="lvBack" class="btn">Voltar</button>
     </div>
   </section>
 
@@ -254,6 +272,24 @@
     <div class="joy-zone"><div class="joy-idle"></div><div class="joy-base"><div class="joy-knob"></div></div></div>
     <div class="btns"></div>
   </div>
+  <!-- instalar como app -->
+  <div id="installBar" hidden>
+    <span>📲 Instale o <b>Genésio</b>: abre em tela cheia e funciona sem internet.</span>
+    <button id="installGo" class="btn small primary">Instalar</button>
+    <button id="installX" class="icon" aria-label="Fechar" title="Agora não">×</button>
+  </div>
+  <div id="iosHelp" hidden>
+    <div class="panel dialog">
+      <h2>Instalar no iPhone / iPad</h2>
+      <p>1. Toque em <b>Compartilhar</b> <span class="ico-share">⬆︎</span> na barra do Safari.<br>2. Escolha <b>Adicionar à Tela de Início</b>.<br>3. Toque em <b>Adicionar</b>. Pronto: o jogo abre como um app, em tela cheia.</p>
+      <button id="iosHelpOk" class="btn primary">Entendi</button>
+    </div>
+  </div>
+  <div id="errBar" hidden>
+    <span id="errMsg"></span>
+    <button id="errReload" class="btn small primary">Recarregar</button>
+    <button id="errX" class="icon" aria-label="Fechar">×</button>
+  </div>
   <div id="toast"></div>
   <button id="btnPause" class="icon hud" title="Menu (Esc)">☰</button>
 </div>
@@ -261,6 +297,7 @@
 <div id="rotate"><div class="phone"></div>Gire o aparelho para jogar na horizontal</div>
 
 <script src="audio.js"></script>
+<script src="loader.js"></script>
 <script src="runner.js"></script>
 <script src="nature.js"></script>
 <script src="tower-data.js"></script>
@@ -275,5 +312,6 @@
 <script src="menu.js"></script>
 <script src="settings.js"></script>
 <script src="touch.js"></script>
+<script src="pwa.js"></script>
 </body>
 </html>

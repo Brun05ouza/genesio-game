@@ -127,3 +127,23 @@ p.small{font-size:15px;opacity:.85;margin:0}
 #toast{top:calc(28px * var(--k,1))}
 .touch .screen:not(#menu):not(#settings):not(#serra):not(#desert) > :not(.logo){zoom:1}   /* celular: nada de zoom, só o ajuste compacto */
 .touch #menu .corner,.touch #menu .hint,.touch .desert-box,.touch #toast{zoom:1}
+
+/* carregamento de fase */
+#lvload{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%);z-index:6}
+#lvFill{height:100%;width:0;background:linear-gradient(var(--g1),var(--g2));transition:width .15s}
+#lvText{margin:0;font-size:18px;text-align:center;max-width:80vw}
+#lvErr[hidden]{display:none}
+#lvload.err #lvText{color:#ffb0a0}
+
+/* ===== app instalável ===== */
+#installBar,#errBar{position:fixed;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:12px;max-width:min(92vw,720px);padding:10px 14px;border-radius:14px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink),0 10px 24px rgba(0,0,0,.4);color:#fff;font:600 15px/1.25 'Fredoka',sans-serif;pointer-events:auto}
+#installBar{top:max(10px,env(safe-area-inset-top));background:rgba(8,40,26,.96)}
+#errBar{bottom:max(10px,env(safe-area-inset-bottom));background:rgba(90,22,16,.96)}
+#installBar[hidden],#errBar[hidden],#iosHelp[hidden],#btnInstall[hidden]{display:none}
+#installBar .icon,#errBar .icon{width:34px;height:34px;font-size:22px;flex:none;line-height:1;padding:0}
+#installBar .btn,#errBar .btn{flex:none;white-space:nowrap}
+#iosHelp{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(6,20,13,.78);pointer-events:auto}
+#iosHelp .panel{max-width:min(92vw,460px)}
+.ico-share{display:inline-block;border:2px solid #fff;border-radius:6px;padding:0 6px;font-size:.9em}
+body.app #installBar,body.app #btnInstall{display:none}
+@media (max-height:480px){#installBar,#errBar{font-size:13px;padding:6px 10px}#installBar .icon,#errBar .icon{width:28px;height:28px}}

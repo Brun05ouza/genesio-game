@@ -8,3 +8,5 @@ node_modules/
 .claude/
 .DS_Store
 Thumbs.db
+touch-*.png
+pwa-offline.png

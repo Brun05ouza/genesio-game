@@ -22,7 +22,7 @@ const Solar = (() => {
   function load() {
     if (loading) return loading;
     if (imgs) return Promise.resolve();
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { hm: [], hh: [], gb: [], fly: [], bg: [], run: [], motion: [], part: {} };
     const jobs = [
       get(OASIS + 'heart.png').then(i => imgs.heart = i), get(OASIS + 'heart_empty.png').then(i => imgs.heartEmpty = i),
@@ -180,7 +180,9 @@ const Solar = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(false); running = true; }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
   // sair no meio da fase: guarda as moedas dos mobs derrotados (uma vez) e fecha a fase
   function leave() { if (g && !g.ended) { g.ended = true; addCoins(g.kills * COIN_VALUE); } stop(); }
 
@@ -264,7 +266,10 @@ const Solar = (() => {
 
   const canActForRain = () => !g.dead && g.phase !== 'intro' && g.phase !== 'victory' && g.phase !== 'win' && !g.paused;
   function cancelAttackInput() { g.charge = null; g.atkQ = false; pointerAttack = false; pointerTap = false; }
+  // celular: a mira vem do botão Lançar (window.touchAim, definido em touch.js); o toque rápido lança para a frente
+  const touchAimed = () => isTouch() && !!window.touchAim && window.touchAim.set;
   function aimDirection() {
+    if (isTouch()) return touchAimed() ? { x: window.touchAim.x, y: window.touchAim.y } : { x: g.face, y: 0 };
     if (!pointerAim.valid) return { x: g.face, y: 0 };
     const canvas = el('c'), rect = canvas.getBoundingClientRect();
     const mx = (pointerAim.x - rect.left) * VW / rect.width / S + g.cam;
@@ -273,8 +278,8 @@ const Solar = (() => {
     return length > 12 ? { x: dx / length, y: dy / length } : { x: g.face, y: 0 };
   }
   function throwHammer(charge) {
-    const aimed = charge >= CHARGE_DELAY, aim = aimed ? aimDirection() : { x: g.face, y: 0 };
-    const power = aimed ? Math.min(1, (charge - CHARGE_DELAY) / (CHARGE_FULL - CHARGE_DELAY)) : 0;
+    const aimed = isTouch() ? touchAimed() : charge >= CHARGE_DELAY, aim = aimed ? aimDirection() : { x: g.face, y: 0 };
+    const power = !aimed ? 0 : isTouch() ? window.touchAim.mag : Math.min(1, (charge - CHARGE_DELAY) / (CHARGE_FULL - CHARGE_DELAY));
     g.atk = null; g.atkQ = false;
     g.hammer = { x: g.x + aim.x * 55, y: g.y - 85 + aim.y * 55, dir: aim.x < 0 ? -1 : 1, dx: aim.x, dy: aim.y, speed: 1000 + 250 * power, t: 0, distance: 0,
       range: 720 + 440 * power, damage: 3 + Math.round(2 * power), returning: false, hit: new Set() };
@@ -1004,8 +1009,8 @@ const Solar = (() => {
       ctx.shadowColor = '#ffe28a'; ctx.shadowBlur = 12;
       ctx.drawImage(imgs.hammer, -32 * S, -38 * S, 64 * S, 76 * S); ctx.restore();
     }
-    if (g.charge !== null && g.charge >= CHARGE_DELAY) {
-      const aim = aimDirection(), power = Math.min(1, (g.charge - CHARGE_DELAY) / (CHARGE_FULL - CHARGE_DELAY));
+    if (g.charge !== null && (isTouch() ? touchAimed() : g.charge >= CHARGE_DELAY)) {
+      const aim = aimDirection(), power = isTouch() ? window.touchAim.mag : Math.min(1, (g.charge - CHARGE_DELAY) / (CHARGE_FULL - CHARGE_DELAY));
       const ox = sx(g.x), oy = sy(g.y - 85), length = (160 + 110 * power) * S;
       const tx = ox + aim.x * length, ty = oy + aim.y * length;
       ctx.save(); ctx.strokeStyle = '#ffe28a'; ctx.lineWidth = 3; ctx.setLineDash([8, 7]);
@@ -1013,7 +1018,7 @@ const Solar = (() => {
       ctx.beginPath(); ctx.arc(tx, ty, 10, 0, Math.PI * 2); ctx.moveTo(tx - 15, ty); ctx.lineTo(tx + 15, ty); ctx.moveTo(tx, ty - 15); ctx.lineTo(tx, ty + 15); ctx.stroke();
       const by = sy(g.y - 210); ctx.fillStyle = '#102b20'; ctx.fillRect(ox - 40, by, 80, 10);
       ctx.fillStyle = power >= 1 ? '#baffad' : '#ffe28a'; ctx.fillRect(ox - 37, by + 3, 74 * power, 4);
-      ctx.font = "700 16px 'Fredoka',sans-serif"; ctx.textAlign = 'center'; outline(ctx, 'MIRE E SOLTE C', ox, by - 13, '#fff3b0', 4); ctx.restore();
+      ctx.font = "700 16px 'Fredoka',sans-serif"; ctx.textAlign = 'center'; outline(ctx, isTouch() ? 'SOLTE PARA LANÇAR' : 'MIRE E SOLTE C', ox, by - 13, '#fff3b0', 4); ctx.restore();
     }
     // arco do martelo
     if (g.atk) {
@@ -1081,7 +1086,7 @@ const Solar = (() => {
     for (let i = 0; i < MAXHP; i++) { const im = i < g.hp ? imgs.heart : imgs.heartEmpty; ctx.drawImage(im, 84 + i * 38, 20, 34, 34 * im.height / im.width); }
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = "700 15px 'Fredoka',sans-serif";
     outline(ctx, g.dodge || g.dodgeGrace > 0 ? 'IMUNE' : g.dodgeCd > 0 ? `Esquiva: ${g.dodgeCd.toFixed(1)}s` : (isTouch() ? 'Esquiva pronta' : 'Shift · esquiva pronta'), 84, 72, g.dodge || g.dodgeGrace > 0 ? '#9ff3ff' : '#fff', 4);
-    outline(ctx, g.hammer ? 'Martelo voltando' : (isTouch() ? 'Lançar: toque · segure e arraste para mirar' : 'C · lançar   Segure C + mouse · mirar'), 84, 94, '#fff3b0', 4);
+    outline(ctx, g.hammer ? 'Martelo voltando' : (isTouch() ? 'Lançar: toque · arraste para mirar' : 'C · lançar   Segure C + mouse · mirar'), 84, 94, '#fff3b0', 4);
     {                                                                // capacete / especial
       const ready = g.special, live = canRain(), pulse = live ? .7 + .3 * Math.sin(g.t * 7) : 1;
       ctx.save(); ctx.globalAlpha = ready ? 1 : .32;

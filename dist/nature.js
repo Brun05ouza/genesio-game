@@ -9,7 +9,7 @@ const Nature = (() => {
   const clockRate = () => 1 + SPEEDUP * g.got.size;
 
   const CHALLENGES = [
-    { id: 'epi', title: 'Pegue os EPIs', time: 60, card: 'card1.jpg' },
+    { id: 'epi', title: 'Pegue os EPIs', time: 60, card: 'card1.webp' },
   ];
 
   // plataformas (face de cima do chão, em pixels do mapa). solid = não dá para descer por elas
@@ -56,13 +56,13 @@ const Nature = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {}, epi: {} };
-    const jobs = [get(DIR + 'bg.jpg').then(i => imgs.bg = i)];
-    for (const e of EPIS) jobs.push(get(`${DIR}epi_${e.id}.png`.replace('epi_capacete', 'epi_capacete')).then(i => imgs.epi[e.id] = i));
+    const jobs = [get(DIR + 'bg.webp').then(i => imgs.bg = i)];
+    for (const e of EPIS) jobs.push(get(`${DIR}epi_${e.id}.webp`.replace('epi_capacete', 'epi_capacete')).then(i => imgs.epi[e.id] = i));
     for (const [name, n] of Object.entries(FRAMES)) {
       imgs.frames[name] = [];
-      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.png`).then(im => imgs.frames[name][i] = im));
+      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.webp`).then(im => imgs.frames[name][i] = im));
     }
     return loading = Promise.all(jobs).catch(e => { imgs = null; loading = null; throw e; });
   }
@@ -86,7 +86,9 @@ const Nature = (() => {
     hideOverlay();
   }
   async function start(id) { await load(); newGame(id); running = true; }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
 
   // ---- telas de pausa / fim ----
   function showOverlay(kind) {

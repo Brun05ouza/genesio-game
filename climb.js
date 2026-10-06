@@ -18,7 +18,7 @@ const Climb = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {}, maps: [], rep: [] };
     const jobs = [
       get(OASIS + 'heart.png').then(i => imgs.heart = i),
@@ -103,7 +103,9 @@ const Climb = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(); running = true; }
-  function stop() { running = false; clearInterval(timer); hideOverlay(); }
+  function stop() { running = false; clearInterval(timer); hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
   const meters = () => Math.max(0, Math.floor((T.START[1] - g.minY) / PX_PER_M));
 
   // ---- telas ----

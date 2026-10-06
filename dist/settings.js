@@ -20,7 +20,7 @@
     const gl = cvs.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: true });
     if (!gl) return;
     const load = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-    Promise.all([load('assets/settings-bg.jpg'), load('assets/settings-mask.png')]).then(([im, mk]) => {
+    Promise.all([load('assets/settings-bg.webp'), load('assets/settings-mask.webp')]).then(([im, mk]) => {
       const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
       const pr = gl.createProgram();
       gl.attachShader(pr, sh(gl.VERTEX_SHADER, 'attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}'));

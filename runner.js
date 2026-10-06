@@ -26,7 +26,7 @@ const Runner = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {} };
     const jobs = [
       get(DIR + 'bg.png').then(i => imgs.bg = i),
@@ -88,7 +88,9 @@ const Runner = (() => {
   function primary() {
     if (el('rPrimary').dataset.kind === 'over') { newGame(g.key); } else { g.paused = false; hideOverlay(); }
   }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
 
   // ---- nascimento de objetos ----
   const isHazard = o => !o.coin && !o.item;

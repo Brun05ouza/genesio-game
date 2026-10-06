@@ -26,20 +26,20 @@ const Runner = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {} };
     const jobs = [
-      get(DIR + 'bg.png').then(i => imgs.bg = i),
-      get(DIR + 'ground.png').then(i => imgs.ground = i),
-      get(DIR + 'cactus_big.png').then(i => imgs.cactus = i),
-      get(DIR + 'hammer.png').then(i => imgs.hammer = i),
-      get(DIR + 'helmet.png').then(i => imgs.helmet = i),
-      get(DIR + 'heart.png').then(i => imgs.heart = i),
-      get(DIR + 'heart_empty.png').then(i => imgs.heartEmpty = i),
+      get(DIR + 'bg.webp').then(i => imgs.bg = i),
+      get(DIR + 'ground.webp').then(i => imgs.ground = i),
+      get(DIR + 'cactus_big.webp').then(i => imgs.cactus = i),
+      get(DIR + 'hammer.webp').then(i => imgs.hammer = i),
+      get(DIR + 'helmet.webp').then(i => imgs.helmet = i),
+      get(DIR + 'heart.webp').then(i => imgs.heart = i),
+      get(DIR + 'heart_empty.webp').then(i => imgs.heartEmpty = i),
     ];
     for (const [name, n] of Object.entries(FRAMES)) {
       imgs.frames[name] = [];
-      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.png`).then(im => imgs.frames[name][i] = im));
+      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.webp`).then(im => imgs.frames[name][i] = im));
     }
     return loading = Promise.all(jobs).catch(e => { imgs = null; loading = null; throw e; });
   }
@@ -88,7 +88,9 @@ const Runner = (() => {
   function primary() {
     if (el('rPrimary').dataset.kind === 'over') { newGame(g.key); } else { g.paused = false; hideOverlay(); }
   }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
 
   // ---- nascimento de objetos ----
   const isHazard = o => !o.coin && !o.item;

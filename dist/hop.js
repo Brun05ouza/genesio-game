@@ -16,10 +16,10 @@ const Hop = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {}, seg: {} };
     const jobs = [];
-    for (const n of Object.keys(SEGS)) jobs.push(get(`fase-teresopolis/nature/hop_${n}.jpg`).then(im => {
+    for (const n of Object.keys(SEGS)) jobs.push(get(`fase-teresopolis/nature/hop_${n}.webp`).then(im => {
       const s = SEGS[n], h = s.bot - s.top;
       const make = mirror => {                          // recorte; a borda de baixo se dissolve sobre o segmento de baixo (exceto o inicial)
         const c = document.createElement('canvas'); c.width = W; c.height = h;
@@ -39,7 +39,7 @@ const Hop = (() => {
     }));
     for (const [name, n] of Object.entries(FRAMES)) {
       imgs.frames[name] = [];
-      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.png`).then(im => imgs.frames[name][i] = im));
+      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.webp`).then(im => imgs.frames[name][i] = im));
     }
     return loading = Promise.all(jobs).catch(e => { imgs = null; loading = null; throw e; });
   }
@@ -117,7 +117,9 @@ const Hop = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(); running = true; }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
   const points = () => Math.max(0, Math.floor((g.startY - g.minY) / PX_PER_PT));
   const riseSpeed = () => Math.min(RISE_MAX, RISE_BASE + RISE_GROW * Math.max(0, g.t - GRACE));
 

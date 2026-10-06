@@ -21,16 +21,18 @@
   addEventListener('contextmenu', e => { if (body.classList.contains('touch')) e.preventDefault(); });
 
   // ---- teclas virtuais (soltar com atraso mínimo para o jogo não perder toques muito rápidos) ----
-  const since = {}, rel = {};
-  function press(code) { clearTimeout(rel[code]); if (!keys[code]) since[code] = performance.now(); keys[code] = true; }
+  // Soltar só depois de 70 ms E de 2 quadros do jogo: assim um toque rápido nunca se perde, mesmo se o aparelho engasgar num quadro.
+  let frame = 0;
+  const since = {}, sinceF = {}, pending = new Set();
+  function press(code) { pending.delete(code); if (!keys[code]) { since[code] = performance.now(); sinceF[code] = frame; } keys[code] = true; }
   function release(code) {
     if (!keys[code]) return;
-    const wait = 70 - (performance.now() - (since[code] || 0));
-    clearTimeout(rel[code]);
-    if (wait > 0) rel[code] = setTimeout(() => { keys[code] = false; }, wait); else keys[code] = false;
+    if (performance.now() - (since[code] || 0) >= 70 && frame - (sinceF[code] || 0) >= 2) { pending.delete(code); keys[code] = false; }
+    else pending.add(code);
   }
+  function flushReleases() { for (const c of [...pending]) if (performance.now() - (since[c] || 0) >= 70 && frame - (sinceF[c] || 0) >= 2) { pending.delete(c); keys[c] = false; } }
   const ALL = ['KeyA', 'KeyD', 'KeyW', 'KeyS', 'Space', 'ShiftLeft', 'KeyJ', 'KeyC', 'KeyF'];
-  const releaseAll = () => { for (const c of ALL) { clearTimeout(rel[c]); keys[c] = false; } };
+  const releaseAll = () => { pending.clear(); for (const c of ALL) keys[c] = false; };
 
   // ---- modos por estado do jogo ----
   const B = {
@@ -38,7 +40,7 @@
     run: { code: 'ShiftLeft', label: 'Correr', cls: 'b-run' },
     dodge: { code: 'ShiftLeft', label: 'Esquiva', cls: 'b-dodge' },
     atk: { code: 'KeyJ', label: 'Bater', cls: 'b-atk' },
-    throw: { code: 'KeyC', label: 'Lançar', cls: 'b-throw' },
+    throw: { code: 'KeyC', label: 'Lançar', cls: 'b-throw', aim: true },
     special: { code: 'KeyF', label: 'Chuva', cls: 'b-special' },
   };
   const MODES = {
@@ -75,15 +77,40 @@
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(ev, e => { if (e.pointerId === joyId) joyEnd(); });
 
   // ---- botões ----
+  // O botão "Lançar" é também um joystick de mira: toque rápido lança para a frente; segure e arraste para mirar
+  // (a distância arrastada vira a força) e solte para lançar. A fase lê a mira em window.touchAim.
+  const touchAim = window.touchAim = { set: false, x: 1, y: 0, mag: 0 };
   const btnBox = root.querySelector('.btns');
+  function aimStick(el) {
+    const ring = document.createElement('div'), pad = document.createElement('div');
+    ring.className = 'aim-ring'; pad.className = 'aim-knob'; ring.appendChild(pad); root.appendChild(ring);
+    let cx0 = 0, cy0 = 0, R = 60;
+    const upd = (x, y) => {
+      const dx = x - cx0, dy = y - cy0, len = Math.hypot(dx, dy), k = Math.min(1, len / R);
+      pad.style.transform = `translate(${dx / (len || 1) * k * R}px,${dy / (len || 1) * k * R}px)`;
+      if (k > .28) { touchAim.set = true; touchAim.x = dx / len; touchAim.y = dy / len; touchAim.mag = k; }
+      else touchAim.set = false;
+    };
+    return {
+      start(e) {
+        const r = el.getBoundingClientRect(); cx0 = r.left + r.width / 2; cy0 = r.top + r.height / 2; R = r.width * 1.05;
+        ring.style.cssText = `left:${cx0}px;top:${cy0}px;width:${R * 2}px;height:${R * 2}px`; ring.classList.add('on');
+        touchAim.set = false; touchAim.mag = 0; upd(e.clientX, e.clientY);
+      },
+      move: e => upd(e.clientX, e.clientY),
+      end() { ring.classList.remove('on'); pad.style.transform = ''; },
+    };
+  }
   function buildButtons(list) {
-    btnBox.innerHTML = '';
+    btnBox.innerHTML = ''; root.querySelectorAll('.aim-ring').forEach(r => r.remove());
     for (const b of list) {
       const el = document.createElement('button');
       el.className = 'tbtn ' + b.cls; el.type = 'button'; el.textContent = b.label; el.setAttribute('aria-label', b.label);
+      const aim = b.aim ? aimStick(el) : null;
       let pid = null;
-      el.addEventListener('pointerdown', e => { e.preventDefault(); pid = e.pointerId; el.setPointerCapture(e.pointerId); el.classList.add('on'); press(b.code); });
-      const up = e => { if (e.pointerId !== pid) return; pid = null; el.classList.remove('on'); release(b.code); };
+      el.addEventListener('pointerdown', e => { e.preventDefault(); pid = e.pointerId; el.setPointerCapture(e.pointerId); el.classList.add('on'); if (aim) aim.start(e); press(b.code); });
+      if (aim) el.addEventListener('pointermove', e => { if (e.pointerId === pid) { e.preventDefault(); aim.move(e); } });
+      const up = e => { if (e.pointerId !== pid) return; pid = null; el.classList.remove('on'); if (aim) aim.end(); release(b.code); };
       for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, up);
       btnBox.appendChild(el);
     }
@@ -92,10 +119,11 @@
   // ---- mostrar/ocultar conforme o estado do jogo ----
   let curMode = null;
   function sync() {
+    frame++; flushReleases();
     const menuOpen = !!document.querySelector('.screen.active');              // pausa, resultado, pergunta...
     const mode = body.classList.contains('touch') && !menuOpen && typeof state !== 'undefined' ? STATE_MODE[state] : null;
     if (mode !== curMode) {
-      if (curMode) { joyEnd(); releaseAll(); }
+      if (curMode) { joyEnd(); releaseAll(); touchAim.set = false; root.querySelectorAll('.aim-ring').forEach(r => r.classList.remove('on')); }
       curMode = mode;
       root.classList.toggle('show', !!mode);
       if (mode) { cfg = MODES[mode]; buildButtons(cfg.buttons); root.dataset.mode = mode; }
@@ -105,12 +133,6 @@
   requestAnimationFrame(sync);
   addEventListener('blur', () => { joyEnd(); releaseAll(); });
 
-  // ---- tela cheia + travar na horizontal ao tocar em "Começar" (onde o navegador permitir) ----
-  document.getElementById('btnStart')?.addEventListener('click', () => {
-    if (!body.classList.contains('touch') || document.fullscreenElement) return;
-    const el = document.documentElement;
-    (el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
-  });
   // tamanho certo quando o aparelho gira ou a barra do navegador aparece/some
   const fit = () => { if (typeof resize === 'function') resize(); };
   addEventListener('orientationchange', () => { fit(); setTimeout(fit, 150); setTimeout(fit, 500); });

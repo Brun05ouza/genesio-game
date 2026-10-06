@@ -24,6 +24,12 @@ button,.btn,.card,.icon{touch-action:manipulation}
 .b-throw{right:calc(var(--u) * 19);bottom:calc(var(--u) * 22);width:calc(var(--u) * 12);height:calc(var(--u) * 12);background:rgba(120,100,200,.82)}
 .b-special{right:calc(var(--u) * 39);bottom:calc(var(--u) * 7);width:calc(var(--u) * 11);height:calc(var(--u) * 11);background:rgba(255,206,70,.88);color:#2a1d05;text-shadow:none}
 
+/* mira do martelo: anel que aparece em volta do botão Lançar enquanto se arrasta */
+.aim-ring{position:absolute;display:none;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;border:3px dashed rgba(255,226,138,.75);background:rgba(255,226,138,.12);z-index:1}
+.aim-ring.on{display:block}
+.aim-knob{position:absolute;left:50%;top:50%;width:34%;height:34%;margin:-17% 0 0 -17%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ffe28a 60%,#d99a1a);border:3px solid rgba(8,21,15,.7);box-shadow:0 3px 8px rgba(0,0,0,.4)}
+.b-throw.on{transform:none}
+
 /* botão de pausa um pouco maior e longe da borda curva */
 .touch .hud{width:48px;height:48px;left:max(14px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top))}
 .touch .hint{display:none}

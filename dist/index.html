@@ -6,6 +6,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0b2418">
+<meta name="apple-mobile-web-app-title" content="Genésio">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Genésio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
@@ -28,28 +34,28 @@
   <!-- menu principal: arte + animações por cima (os botões da arte são áreas clicáveis) -->
   <section id="menu" class="screen">
     <div class="mstage" id="mstage">
-      <img class="mbg" src="assets/menu-bg.jpg" alt="Genésio — Uma aventura pela cidade" draggable="false">
+      <img class="mbg" src="assets/menu-bg.webp" alt="Genésio — Uma aventura pela cidade" draggable="false">
       <div class="sunglow"></div>
       <div class="sunrays"></div>
       <div class="mg mg-a" data-k="a" style="left:7.057%;top:16.472%;width:12.679%;--delay:0s;--dur:2.6s;--amp:1.0cqw;--r0:-1.6deg;--r1:1.8deg">
-        <img class="g-open" src="assets/menu-g-a.png" alt="" draggable="false">
-        <img class="g-blink" src="assets/menu-g-a-blink.png" alt="" draggable="false">
+        <img class="g-open" src="assets/menu-g-a.webp" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-a-blink.webp" alt="" draggable="false">
       </div>
       <div class="mg mg-b" data-k="b" style="left:43.242%;top:17.003%;width:15.550%;--delay:-.4s;--dur:2.0s;--amp:1.6cqw;--r0:-2.2deg;--r1:2.2deg">
-        <img class="g-open" src="assets/menu-g-b.png" alt="" draggable="false">
-        <img class="g-blink" src="assets/menu-g-b-blink.png" alt="" draggable="false">
+        <img class="g-open" src="assets/menu-g-b.webp" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-b-blink.webp" alt="" draggable="false">
       </div>
       <div class="mg mg-c" data-k="c" style="left:88.098%;top:22.742%;width:10.347%;--delay:-.9s;--dur:2.9s;--amp:1.1cqw;--r0:-2.5deg;--r1:2.5deg">
-        <img class="g-open" src="assets/menu-g-c.png" alt="" draggable="false">
-        <img class="g-blink" src="assets/menu-g-c-blink.png" alt="" draggable="false">
+        <img class="g-open" src="assets/menu-g-c.webp" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-c-blink.webp" alt="" draggable="false">
       </div>
       <div class="mg mg-d" data-k="d" style="left:17.404%;top:68.332%;width:14.773%;--delay:-1.2s;--dur:1.7s;--amp:1.3cqw;--r0:-3deg;--r1:1.2deg">
-        <img class="g-open" src="assets/menu-g-d.png" alt="" draggable="false">
-        <img class="g-blink" src="assets/menu-g-d-blink.png" alt="" draggable="false">
+        <img class="g-open" src="assets/menu-g-d.webp" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-d-blink.webp" alt="" draggable="false">
       </div>
       <div class="mg mg-e" data-k="e" style="left:77.871%;top:71.626%;width:10.048%;--delay:-.6s;--dur:2.3s;--amp:0.9cqw;--r0:-1.5deg;--r1:2deg">
-        <img class="g-open" src="assets/menu-g-e.png" alt="" draggable="false">
-        <img class="g-blink" src="assets/menu-g-e-blink.png" alt="" draggable="false">
+        <img class="g-open" src="assets/menu-g-e.webp" alt="" draggable="false">
+        <img class="g-blink" src="assets/menu-g-e-blink.webp" alt="" draggable="false">
       </div>
       <div class="tshine"></div>
       <canvas id="mfx" width="1672" height="941"></canvas>
@@ -59,6 +65,7 @@
       <button id="btnSettings" class="mhot sett" aria-label="Configurações">Configurações</button>
     </div>
     <div class="corner">
+      <button id="btnInstall" class="icon" title="Instalar o app" aria-label="Instalar o app" hidden>📲</button>
       <button id="btnMusic" class="icon" title="Música">🎵</button>
       <button id="btnSfx" class="icon" title="Efeitos sonoros">🔊</button>
     </div>
@@ -68,7 +75,7 @@
   <!-- configurações: arte animada + painel real por cima -->
   <section id="settings" class="screen">
     <div class="sstage" id="sstage">
-      <img class="sbg" src="assets/settings-bg.jpg" alt="Configurações" draggable="false">
+      <img class="sbg" src="assets/settings-bg.webp" alt="Configurações" draggable="false">
       <div class="ssun"></div>
       <div class="srays"></div>
       <canvas id="sfx" width="1764" height="892"></canvas>
@@ -78,6 +85,17 @@
         <div class="srow r3" style="top:79.6%"><span class="lbl">Tela cheia</span><button id="btnFull" class="sbtn">Alternar</button></div>
       </div>
       <button id="btnBack" class="mhot" aria-label="Voltar">Voltar</button>
+    </div>
+  </section>
+
+  <!-- carregamento de uma fase (com progresso e botão de tentar de novo) -->
+  <section id="lvload" class="screen">
+    <div class="logo small" id="lvTitle">Carregando...</div>
+    <div class="bar"><div id="lvFill"></div></div>
+    <p id="lvText">Baixando... 0%</p>
+    <div class="dialog-btns" id="lvErr" hidden>
+      <button id="lvRetry" class="btn primary">Tentar de novo</button>
+      <button id="lvBack" class="btn">Voltar</button>
     </div>
   </section>
 
@@ -114,7 +132,7 @@
 
   <!-- lobby do Oásis -->
   <section id="oasis" class="screen stage">
-    <img class="mascot2" alt="" src="frames/idle0.png">
+    <img class="mascot2" alt="" src="frames/idle0.webp">
     <h1 class="logo">OÁSIS</h1>
     <p class="tagline">Residencial · Corrida no deserto</p>
     <div class="buttons">
@@ -141,18 +159,18 @@
     <p class="tagline">Desafios na mata · <span id="natCoins">0</span> 🪙 GenesisCoins</p>
     <div class="cards">
       <button class="card" data-challenge="epi">
-        <img src="fase-teresopolis/nature/card1.jpg" alt="">
+        <img src="fase-teresopolis/nature/card1.webp" alt="">
         <b>Desafio 1</b><span>Pegue os EPIs</span><small>8 itens · 60 s · o tempo acelera · <em id="natBest-epi"></em></small>
       </button>
       <button class="card" data-challenge="climb">
-        <img src="fase-teresopolis/nature/card2.jpg" alt="">
+        <img src="fase-teresopolis/nature/card2.webp" alt="">
         <b>Desafio 2</b><span>Torre de moedas</span><small>sem tempo · 5 vidas · <em id="natBest-climb"></em></small>
       </button>
       <button class="card" data-challenge="hop">
-        <img src="fase-teresopolis/nature/card3.jpg" alt="">
+        <img src="fase-teresopolis/nature/card3.webp" alt="">
         <b>Desafio 3</b><span>Subida infinita</span><small>pule sozinho · só A/D · <em id="natBest-hop"></em></small>
       </button>
-      <div class="card locked"><img src="fase-teresopolis/nature/card4.jpg" alt=""><b>Desafio 4</b><span>Em breve</span><small>🔒</small></div>
+      <div class="card locked"><img src="fase-teresopolis/nature/card4.webp" alt=""><b>Desafio 4</b><span>Em breve</span><small>🔒</small></div>
     </div>
     <button id="btnNatureBack" class="btn">Voltar</button>
   </section>
@@ -163,7 +181,7 @@
       <h2 id="kTitle">Pausado</h2>
       <p id="kInfo"></p>
       <div id="kConvert" class="convert">
-        <img src="frames/fly0.png" alt="" class="cg">
+        <img src="frames/fly0.webp" alt="" class="cg">
         <span class="cx">× <b id="kN">0</b></span>
         <span class="arrow">➜</span>
         <span class="cx">🪙 <b id="kG">0</b></span>
@@ -220,7 +238,7 @@
   <!-- carregamento de Teresópolis (imagem com barra de progresso por cima) -->
   <section id="serra" class="screen">
     <div class="serra-stage">
-      <img src="assets/teresopolis-loading.jpg" alt="">
+      <img src="assets/teresopolis-loading.webp" alt="">
       <div class="serra-bar"><div id="serraFill"></div></div>
       <p id="serraText">Carregando...</p>
     </div>
@@ -254,6 +272,24 @@
     <div class="joy-zone"><div class="joy-idle"></div><div class="joy-base"><div class="joy-knob"></div></div></div>
     <div class="btns"></div>
   </div>
+  <!-- instalar como app -->
+  <div id="installBar" hidden>
+    <span>📲 Instale o <b>Genésio</b>: abre em tela cheia e funciona sem internet.</span>
+    <button id="installGo" class="btn small primary">Instalar</button>
+    <button id="installX" class="icon" aria-label="Fechar" title="Agora não">×</button>
+  </div>
+  <div id="iosHelp" hidden>
+    <div class="panel dialog">
+      <h2>Instalar no iPhone / iPad</h2>
+      <p>1. Toque em <b>Compartilhar</b> <span class="ico-share">⬆︎</span> na barra do Safari.<br>2. Escolha <b>Adicionar à Tela de Início</b>.<br>3. Toque em <b>Adicionar</b>. Pronto: o jogo abre como um app, em tela cheia.</p>
+      <button id="iosHelpOk" class="btn primary">Entendi</button>
+    </div>
+  </div>
+  <div id="errBar" hidden>
+    <span id="errMsg"></span>
+    <button id="errReload" class="btn small primary">Recarregar</button>
+    <button id="errX" class="icon" aria-label="Fechar">×</button>
+  </div>
   <div id="toast"></div>
   <button id="btnPause" class="icon hud" title="Menu (Esc)">☰</button>
 </div>
@@ -261,6 +297,7 @@
 <div id="rotate"><div class="phone"></div>Gire o aparelho para jogar na horizontal</div>
 
 <script src="audio.js"></script>
+<script src="loader.js"></script>
 <script src="runner.js"></script>
 <script src="nature.js"></script>
 <script src="tower-data.js"></script>
@@ -275,5 +312,6 @@
 <script src="menu.js"></script>
 <script src="settings.js"></script>
 <script src="touch.js"></script>
+<script src="pwa.js"></script>
 </body>
 </html>

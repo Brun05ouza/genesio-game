@@ -67,6 +67,7 @@ const assert = require('node:assert/strict');
   await page.locator('#btnYes').tap(); await page.waitForFunction(() => state === 'splay');
   await page.waitForTimeout(3300);
   r.solarButtons = (await ev(() => [...document.querySelectorAll('.tbtn')].map(b => b.textContent).join(','))) === 'Pular,Bater,Esquiva,Lançar,Chuva';
+  const keepSafe = setInterval(() => page.evaluate(() => { const g = Solar._debug(); if (g) { g.invul = Math.max(g.invul, 2); g.hurtT = 0; g.stumble = 0; } }).catch(() => {}), 40);   // inimigos não atrapalham o teste dos botões
   const sx0 = await ev(() => Solar._debug().x);
   await touch('touchStart', 120, 300); await touch('touchMove', 190, 300); await page.waitForTimeout(500);
   r.solarMoves = (await ev(() => Solar._debug().x)) - sx0 > 30;
@@ -81,7 +82,24 @@ const assert = require('node:assert/strict');
   await touch('touchStart', b.x + 10, b.y + 10, 4); await touch('touchEnd');
   await page.waitForTimeout(200);
   r.quickTapCounts = await ev(() => Solar._debug().combo >= 0) ;
+  // mira do martelo pelo botão Lançar: arrastar para cima-direita lança nessa direção
+  await ev(() => { const g = Solar._debug(); g.atk = null; g.hammer = null; g.throwT = 0; g.hurtT = 0; g.stumble = 0; });
+  const tb = await page.locator('.b-throw').boundingBox(), tcx = tb.x + tb.width / 2, tcy = tb.y + tb.height / 2;
+  await touch('touchStart', tcx, tcy, 5); await touch('touchMove', tcx + tb.width * .7, tcy - tb.width * .7, 5); await page.waitForTimeout(150);
+  r.aimRingShown = await visible('.aim-ring.on');
+  await page.screenshot({ path: 'touch-solar-aim.png' });
+  await touch('touchEnd'); await page.waitForTimeout(250);
+  const hm = await ev(() => { const h = Solar._debug().hammer; return h && { dx: h.dx, dy: h.dy }; });
+  r.aimThrowDir = !!hm && hm.dx > .5 && hm.dy < -.5;
+  r.aimRingHidden = !(await visible('.aim-ring.on'));
+  // toque rápido (sem arrastar) lança para a frente
+  await page.waitForTimeout(2500);
+  await ev(() => { const g = Solar._debug(); g.hammer = null; g.throwT = 0; g.face = -1; g.hurtT = 0; g.stumble = 0; g.atk = null; g.dodge = null; });
+  await touch('touchStart', tcx, tcy, 6); await page.waitForTimeout(120); await touch('touchEnd'); await page.waitForTimeout(250);
+  const hf = await ev(() => { const h = Solar._debug().hammer; return h && { dx: h.dx, dy: h.dy }; });
+  r.tapThrowsForward = !!hf && hf.dx < -.9 && Math.abs(hf.dy) < .1;
   await page.screenshot({ path: 'touch-solar.png' });
+  clearInterval(keepSafe);
   // tocar na tela vazia não ataca (o ataque é pelos botões)
   r.canvasTapNoAttack = await ev(() => !document.body.classList.contains('touch') || true);
 

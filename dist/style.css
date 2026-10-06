@@ -67,7 +67,7 @@ body.playing .hud{display:block}
 .dialog-btns{display:flex;gap:16px;justify-content:center}
 .dialog-btns.col{flex-direction:column;width:100%}
 #rOverlay{background:rgba(6,20,13,.6);z-index:4}
-.stage{background:linear-gradient(rgba(60,25,5,.35),rgba(60,25,5,.6)),url("fase-nova-igua%C3%A7u/Sunlit%20Desert%20Platformer%20Landscape.png") center/cover no-repeat}
+.stage{background:linear-gradient(rgba(60,25,5,.35),rgba(60,25,5,.6)),url("fase-nova-igua%C3%A7u/Sunlit%20Desert%20Platformer%20Landscape.webp") center/cover no-repeat}
 .stage .logo{color:#fff3b0;text-shadow:0 5px 0 #b3581f,0 10px 0 #7a3a12,0 16px 24px rgba(0,0,0,.5)}
 .mascot2{height:clamp(100px,20vh,170px);animation:bob 1.4s ease-in-out infinite;filter:drop-shadow(0 10px 8px rgba(0,0,0,.5))}
 .btn.diff{display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -85,7 +85,7 @@ body.playing .hud{display:block}
 #desert.serra #desertText{text-shadow:0 2px 0 #15402a}
 
 /* Nature */
-.natstage{background:linear-gradient(rgba(6,30,18,.55),rgba(6,30,18,.82)),url("fase-teresopolis/nature/card1.jpg") center/cover no-repeat}
+.natstage{background:linear-gradient(rgba(6,30,18,.55),rgba(6,30,18,.82)),url("fase-teresopolis/nature/card1.webp") center/cover no-repeat}
 .natstage .logo{color:#d9ffb0;text-shadow:0 5px 0 #2f8f4a,0 10px 0 #15402a,0 16px 24px rgba(0,0,0,.5)}
 .cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:min(1100px,94vw)}
 .card{width:min(230px,42vw);background:rgba(8,21,15,.88);border:3px solid var(--ink);border-radius:16px;padding:8px 8px 12px;color:#fff;font:inherit;
@@ -127,3 +127,23 @@ p.small{font-size:15px;opacity:.85;margin:0}
 #toast{top:calc(28px * var(--k,1))}
 .touch .screen:not(#menu):not(#settings):not(#serra):not(#desert) > :not(.logo){zoom:1}   /* celular: nada de zoom, só o ajuste compacto */
 .touch #menu .corner,.touch #menu .hint,.touch .desert-box,.touch #toast{zoom:1}
+
+/* carregamento de fase */
+#lvload{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%);z-index:6}
+#lvFill{height:100%;width:0;background:linear-gradient(var(--g1),var(--g2));transition:width .15s}
+#lvText{margin:0;font-size:18px;text-align:center;max-width:80vw}
+#lvErr[hidden]{display:none}
+#lvload.err #lvText{color:#ffb0a0}
+
+/* ===== app instalável ===== */
+#installBar,#errBar{position:fixed;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:12px;max-width:min(92vw,720px);padding:10px 14px;border-radius:14px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink),0 10px 24px rgba(0,0,0,.4);color:#fff;font:600 15px/1.25 'Fredoka',sans-serif;pointer-events:auto}
+#installBar{top:max(10px,env(safe-area-inset-top));background:rgba(8,40,26,.96)}
+#errBar{bottom:max(10px,env(safe-area-inset-bottom));background:rgba(90,22,16,.96)}
+#installBar[hidden],#errBar[hidden],#iosHelp[hidden],#btnInstall[hidden]{display:none}
+#installBar .icon,#errBar .icon{width:34px;height:34px;font-size:22px;flex:none;line-height:1;padding:0}
+#installBar .btn,#errBar .btn{flex:none;white-space:nowrap}
+#iosHelp{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(6,20,13,.78);pointer-events:auto}
+#iosHelp .panel{max-width:min(92vw,460px)}
+.ico-share{display:inline-block;border:2px solid #fff;border-radius:6px;padding:0 6px;font-size:.9em}
+body.app #installBar,body.app #btnInstall{display:none}
+@media (max-height:480px){#installBar,#errBar{font-size:13px;padding:6px 10px}#installBar .icon,#errBar .icon{width:28px;height:28px}}

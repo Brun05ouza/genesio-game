@@ -15,7 +15,7 @@ const Flow = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { bg: [], pil: {} };
     const jobs = [get(DIR + 'ufo_body.png').then(i => imgs.ufo = i)];
     FLOW_DATA.segments.forEach((s, k) => {
@@ -82,7 +82,9 @@ const Flow = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(); running = true; }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
   const speedFor = s => Math.min(540, 330 + 5.5 * s);
 
   // ---- telas ----

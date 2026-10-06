@@ -16,7 +16,7 @@ const Hop = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {}, seg: {} };
     const jobs = [];
     for (const n of Object.keys(SEGS)) jobs.push(get(`fase-teresopolis/nature/hop_${n}.jpg`).then(im => {
@@ -117,7 +117,9 @@ const Hop = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(); running = true; }
-  function stop() { running = false; hideOverlay(); }
+  function stop() { running = false; hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
   const points = () => Math.max(0, Math.floor((g.startY - g.minY) / PX_PER_PT));
   const riseSpeed = () => Math.min(RISE_MAX, RISE_BASE + RISE_GROW * Math.max(0, g.t - GRACE));
 

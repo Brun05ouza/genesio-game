@@ -5,7 +5,7 @@ const VW = canvas.width, VH = canvas.height;
 // ---- carregar imagens ----
 const ANIMS = { idle: 1, walk: 8, run: 4, jump: 5 };
 const SCALE = { idle: 0.78, walk: 1, run: 1.05, jump: 1.35 }; // iguala o tamanho visual dos frames
-const MAP_FILE = 'map/new-map.png';
+const MAP_FILE = 'map/new-map.webp';
 let MAP_ZOOM = 1.5;        // zoom do mapa na tela (cada fase define o seu, para o Genésio ficar na proporção certa)
 const CHAR_SCALE = 0.8;    // Genésio ~80px de altura no mundo (um banco de praça tem ~70px de largura)
 const frames = {};
@@ -13,12 +13,12 @@ let mapImg = new Image();
 // fases: cada uma tem seu mapa; encostar na borda de baixo leva à próxima
 const LEVELS = {
   praca:  { file: MAP_FILE, start: [627, 780], next: 'iguacu', name: 'Lobby', enter: 'Voltando para o Lobby' },
-  iguacu: { file: 'fase-nova-igua%C3%A7u/map-nova-igua%C3%A7u.png', start: [630, 1215], next: 'praca', name: 'Nova Iguaçu', enter: 'Entrando na área de Nova Iguaçu' },
+  iguacu: { file: 'fase-nova-igua%C3%A7u/map-nova-igua%C3%A7u.webp', start: [630, 1215], next: 'praca', name: 'Nova Iguaçu', enter: 'Entrando na área de Nova Iguaçu' },
   // mapa isométrico grande (1448x1086): zoom baixo para ver bastante do mapa, e Genésio menor para manter a proporção com bancos, carros e postes
   teresopolis: {
-    file: 'fase-teresopolis/Isometric%20Modern%20Residential%20Complex.png',
+    file: 'fase-teresopolis/Isometric%20Modern%20Residential%20Complex.webp',
     zoom: 2.0, charScale: 0.55, free: true,     // sem colisão; visão aberta e Genésio menor, na proporção do mapa
-    start: [590, 845], waterExit: { file: 'fase-teresopolis/water-mask.png', to: 'praca' },   // passou da rua e chegou na água: volta ao lobby
+    start: [590, 845], waterExit: { file: 'fase-teresopolis/water-mask.webp', to: 'praca' },   // passou da rua e chegou na água: volta ao lobby
     name: 'Teresópolis', enter: 'Entrando na área de Teresópolis', theme: 'serra',
     tips: ['Subindo a serra...', 'Respirando ar fresco...', 'Procurando o Oásis...', 'Quase lá...'],
   },
@@ -65,7 +65,7 @@ for (const [name, n] of Object.entries(ANIMS)) {
     pending++; total++;
     const im = new Image();
     im.onload = done;
-    im.src = `frames/${name}${i}.png`;
+    im.src = `frames/${name}${i}.webp`;
     frames[name].push(im);
   }
 }
@@ -172,7 +172,7 @@ const SIGNS = [
 ];
 // portal de pedra "Teresópolis" na rua de cima do lobby (x/y = centro da base). solid = trechos (fração da largura) onde há pedra no chão
 const GATES = [
-  { level: 'praca', file: 'fase-teresopolis/gateway.png', x: 627, y: 190, w: 306, pix: 150, name: [676, 130, 64, 590],
+  { level: 'praca', file: 'fase-teresopolis/gateway.webp', x: 627, y: 190, w: 306, pix: 150, name: [676, 130, 64, 590],
     solid: [[0.017, 0.19], [0.382, 0.626], [0.81, 0.995]] },
 ];
 for (const gt of GATES) {
@@ -350,7 +350,7 @@ requestAnimationFrame(loop);
 let state = 'loading', started = false;
 function show(name) {
   state = name;
-  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra']) $(id).classList.toggle('active', id === name);
+  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'lvload']) $(id).classList.toggle('active', id === name);
   if (name !== 'runner') $('rOverlay').classList.remove('active');
   if (name !== 'nplay') $('nOverlay').classList.remove('active');
   if (name !== 'kplay') $('kOverlay').classList.remove('active');
@@ -467,10 +467,31 @@ function refreshBests() {
   const b = Runner.bests();
   for (const k in b) $('best-' + k).textContent = b[k] ? `Recorde: ${b[k]}` : 'Sem recorde ainda';
 }
-async function beginRun(diff) {
+// carrega uma fase mostrando progresso; se a rede falhar oferece tentar de novo. Só aparece se demorar (evita piscar quando já está em cache)
+let lvToken = 0;
+async function loadWithScreen(title, starter, onOk, onBack) {
+  const token = ++lvToken;
   for (const k in keys) keys[k] = false;
-  try { await Runner.start(diff); } catch (e) { toast('Erro ao carregar a fase'); show('oasis'); return; }
-  show('runner');
+  Loader.reset(); state = 'lvload';
+  const showTimer = setTimeout(() => { if (token !== lvToken) return; $('lvTitle').textContent = title; $('lvFill').style.width = '0%'; $('lvText').textContent = 'Baixando... 0%'; $('lvErr').hidden = true; $('lvload').classList.remove('err'); show('lvload'); state = 'lvload'; }, 120);
+  Loader.onProgress = (d, t) => { const p = t ? Math.round(d / t * 100) : 0; $('lvFill').style.width = p + '%'; $('lvText').textContent = `Baixando... ${p}%`; };
+  try { await starter(); }
+  catch (e) {
+    clearTimeout(showTimer); Loader.onProgress = null; console.error(e);
+    if (token !== lvToken) return;
+    show('lvload'); state = 'lvload'; $('lvTitle').textContent = title; $('lvload').classList.add('err');
+    $('lvText').textContent = navigator.onLine === false ? 'Sem internet. Conecte-se e tente de novo.' : 'Não foi possível carregar a fase. Verifique a conexão.';
+    $('lvErr').hidden = false;
+    $('lvRetry').onclick = () => loadWithScreen(title, starter, onOk, onBack);
+    $('lvBack').onclick = () => { lvToken++; onBack(); };
+    return;
+  }
+  clearTimeout(showTimer); Loader.onProgress = null;
+  if (token !== lvToken) return;
+  onOk();
+}
+async function beginRun(diff) {
+  await loadWithScreen('Oásis Residencial', () => Runner.start(diff), () => show('runner'), () => show('oasis'));
 }
 function exitRunner() { Runner.stop(); promptBlocked = true; show('playing'); }
 
@@ -493,10 +514,8 @@ function openNature() {
   show('nature');
 }
 async function beginChallenge(id) {
-  for (const k in keys) keys[k] = false;
   const mod = id === 'climb' ? Climb : id === 'hop' ? Hop : Nature;
-  try { await mod.start(id); } catch (e) { toast('Erro ao carregar o desafio'); show('nature'); return; }
-  show(id === 'climb' ? 'kplay' : id === 'hop' ? 'hplay' : 'nplay');
+  await loadWithScreen('Nature', () => mod.start(id), () => show(id === 'climb' ? 'kplay' : id === 'hop' ? 'hplay' : 'nplay'), () => show('nature'));
 }
 document.querySelectorAll('[data-challenge]').forEach(b => b.addEventListener('click', () => { Sound.init(); Sound.click(); b.blur(); beginChallenge(b.dataset.challenge); }));
 click('btnNatureBack', backToMap);
@@ -513,22 +532,16 @@ click('hExit', () => { Hop.stop(); promptBlocked = true; show('playing'); });
 
 // Solar do Bosque: a saída só libera depois da animação de morte do golem.
 async function beginSolar() {
-  if (state === 'solar-loading') return;
-  show('solar-loading');
-  for (const k in keys) keys[k] = false;
-  toast('Preparando o Solar do Bosque...', 3000);
-  try { await Solar.start(); } catch (e) { toast('Erro ao carregar o Solar do Bosque. Tente novamente.'); backToMap(); return; }
-  clearTimeout(toast.h); $('toast').classList.remove('show');
-  show('splay');
+  if (state === 'lvload') return;
+  await loadWithScreen('Solar do Bosque', () => Solar.start(), () => show('splay'), () => backToMap());
 }
 click('sPrimary', () => { for (const k in keys) keys[k] = false; Solar.primary(); });
 click('sRestart', () => { for (const k in keys) keys[k] = false; Solar.restartAll(); });
 click('sExit', () => { Solar.leave(); backToMap(); });
 // Flow Residencial (voo estilo Flappy Bird)
 async function beginFlow() {
-  for (const k in keys) keys[k] = false;
-  try { await Flow.start(); } catch (e) { console.error(e); toast('Erro ao carregar a fase'); backToMap(); return; }
-  show('fplay');
+  if (state === 'lvload') return;
+  await loadWithScreen('Flow Residencial', () => Flow.start(), () => show('fplay'), () => backToMap());
 }
 click('fPrimary', () => { for (const k in keys) keys[k] = false; Flow.primary(); });
 click('fExit', () => { Flow.stop(); backToMap(); });

@@ -18,11 +18,11 @@ const Climb = (() => {
   function load() {
     if (imgs) return Promise.resolve();
     if (loading) return loading;
-    const get = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const get = Loader.img;
     imgs = { frames: {}, maps: [], rep: [] };
     const jobs = [
-      get(OASIS + 'heart.png').then(i => imgs.heart = i),
-      get(OASIS + 'heart_empty.png').then(i => imgs.heartEmpty = i),
+      get(OASIS + 'heart.webp').then(i => imgs.heart = i),
+      get(OASIS + 'heart_empty.webp').then(i => imgs.heartEmpty = i),
     ];
     const slice = (im, sy, h, extra, mirror) => {              // recorte do mapa; a borda de baixo se dissolve sobre o mapa de baixo
       const c = document.createElement('canvas'); c.width = 1672; c.height = h + extra;
@@ -38,7 +38,7 @@ const Climb = (() => {
       }
       return c;
     };
-    for (let k = 0; k < 5; k++) jobs.push(get(`fase-teresopolis/nature/m${k}.jpg`).then(im => {
+    for (let k = 0; k < 5; k++) jobs.push(get(`fase-teresopolis/nature/m${k}.webp`).then(im => {
       imgs.maps[k] = slice(im, T.SY[k], T.EY[k] - T.SY[k], k > 0 ? 40 : 0, false);
       if (k === 0) {                                   // ilha pequena do mapa 0 vira "ilha de ligação"
         const s = document.createElement('canvas'); s.width = 96; s.height = 64;
@@ -49,7 +49,7 @@ const Climb = (() => {
     }));
     for (const [name, n] of Object.entries(FRAMES)) {
       imgs.frames[name] = [];
-      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.png`).then(im => imgs.frames[name][i] = im));
+      for (let i = 0; i < n; i++) jobs.push(get(`frames/${name}${i}.webp`).then(im => imgs.frames[name][i] = im));
     }
     return loading = Promise.all(jobs).catch(e => { imgs = null; loading = null; throw e; });
   }
@@ -103,7 +103,9 @@ const Climb = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(); running = true; }
-  function stop() { running = false; clearInterval(timer); hideOverlay(); }
+  function stop() { running = false; clearInterval(timer); hideOverlay(); unload(); }
+  // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
+  function unload() { imgs = null; loading = null; }
   const meters = () => Math.max(0, Math.floor((T.START[1] - g.minY) / PX_PER_M));
 
   // ---- telas ----
