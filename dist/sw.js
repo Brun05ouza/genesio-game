@@ -1,6 +1,6 @@
 // Service worker do Genésio: guarda o jogo no aparelho (abre rápido e funciona sem internet depois da primeira vez).
 // VERSION e CORE são trocados pelo build-dist.py a cada publicação; os demais arquivos entram no cache conforme o jogo os usa.
-const VERSION = '1452007256';
+const VERSION = 'a52b77332d';
 const CORE = ["./", "assets/lobby-loading.webp", "assets/menu-bg.webp", "assets/menu-foliage.webp", "assets/menu-g-a-blink.webp", "assets/menu-g-a.webp", "assets/menu-g-b-blink.webp", "assets/menu-g-b.webp", "assets/menu-g-c-blink.webp", "assets/menu-g-c.webp", "assets/menu-g-d-blink.webp", "assets/menu-g-d.webp", "assets/menu-g-e-blink.webp", "assets/menu-g-e.webp", "assets/settings-bg.webp", "assets/settings-mask.webp", "audio.js", "climb.js", "favicon.ico", "flow-data.js", "flow.js", "game.js", "hop-data.js", "hop.js", "icons/apple-touch-icon.png", "icons/favicon-48.png", "icons/favicon-64.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "index.html", "loader.js", "manifest.webmanifest", "menu.css", "menu.js", "nature.js", "pwa.js", "runner.js", "settings.css", "settings.js", "solar-data.js", "solar.js", "style.css", "talk.js", "touch.css", "touch.js", "tower-data.js"];
 const CACHE = 'genesio-' + VERSION;
 

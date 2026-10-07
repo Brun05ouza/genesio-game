@@ -14,10 +14,10 @@ const URL = process.argv[2] || 'http://localhost:8000';
   r.maskLoaded = await ev(() => !!walkMask && walkMask.w === mapImg.width && walkMask.h === mapImg.height);
 
   // pontos que precisam ser pisáveis: partida, retornos de Nova Iguaçu/Teresópolis, placa de Nova Iguaçu, ruas, praça
-  const ok = await ev(() => [[627, 780], [630, 1200], [627, 222], [548, 1085], [627, 1000], [627, 600 + 80], [400, 540], [850, 540], [627, 330], [300, 560], [1000, 560]].map(([x, y]) => canWalk(x, y)));
+  const ok = await ev(() => [[627, 780], [630, 1200], [627, 222], [548, 1085], [627, 1000], [627, 600 + 80], [400, 540], [850, 540], [627, 330], [300, 560], [1000, 560], [380, 330], [470, 700]].map(([x, y]) => canWalk(x, y)));
   r.walkablePoints = ok.every(Boolean);
   // pontos que precisam estar bloqueados: fonte, bancos, postes, canteiros, árvores, muros, pilares
-  const bad = await ev(() => [[627, 540], [627, 470], [560, 600], [520, 340], [425, 430], [470, 700], [790, 742], [520, 757], [400, 900], [300, 1000], [120, 300], [210, 350], [370, 190], [500, 150], [467, 280]].map(([x, y]) => canWalk(x, y)));
+  const bad = await ev(() => [[627, 540], [627, 470], [560, 600], [520, 340], [425, 430], [790, 742], [520, 757], [400, 900], [300, 1000], [120, 300], [210, 350], [370, 190], [500, 150], [467, 280]].map(([x, y]) => canWalk(x, y)));
   r.blockedPoints = bad.every(v => !v);
 
   const hold = async (key, ms, start) => {
@@ -28,12 +28,14 @@ const URL = process.argv[2] || 'http://localhost:8000';
   // andar para cima, na praça, até a fonte: para antes dela
   let p = await hold('KeyW', 2500, [627, 720]);
   r.fonteBarra = p.y > 630 && p.y < 720;
-  // andar para a esquerda até a borda da calçada: não chega na grama/jardim
+  // andar para a esquerda: passa por cima dos arbustos e só para no muro da praça
   p = await hold('KeyA', 3000, [627, 700]);
-  r.calcadaBarra = p.x > 280 && p.x < 627;
-  // andar pelo canteiro do banco (noroeste): barrado
+  r.arbustosLivres = p.x > 270 && p.x < 400;
+  // atravessa o canteiro do noroeste (sem física), mas o banco ainda barra
   p = await hold('KeyD', 2500, [330, 300]);
-  r.canteiroBarra = p.x < 395;
+  r.canteiroLivre = p.x > 430;
+  p = await hold('KeyD', 2500, [380, 430]);
+  r.bancoBarra = p.x < 405;
   // desliza pela borda em vez de travar: diagonal contra o muro
   await ev(() => { show('playing'); player.wx = 300; player.wy = 700; });
   await page.keyboard.down('KeyA'); await page.keyboard.down('KeyS'); await page.waitForTimeout(1500); await page.keyboard.up('KeyA'); await page.keyboard.up('KeyS');

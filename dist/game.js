@@ -27,7 +27,7 @@ const LEVELS = {
   },
 };
 // onde o Genésio reaparece ao voltar de uma fase para outra
-const RETURN_POS = { 'praca<-iguacu': [630, 1200], 'praca<-teresopolis': [627, 222] };
+const RETURN_POS = { 'praca<-iguacu': [630, 1200], 'praca<-teresopolis': [627, 262] };
 let waterMask = null;      // água da borda do mapa (sair da fase)
 let walkMask = null;       // máscara de chão pisável da fase atual (se houver)
 function canWalk(x, y) {
@@ -154,7 +154,7 @@ function update(dt) {
   // arcos: atravessar pelos vãos laterais leva à outra área (lobby -> Teresópolis pelo norte; Teresópolis -> lobby pelo sul)
   for (const gt of GATES) {
     if (gt.level !== levelId || Math.abs(player.wx - gt.x) >= gt.w / 2) continue;
-    if (gt.side === 'north' ? player.wy < gt.y - 38 : player.wy > gt.y + 22) { goToLevel(gt.to); break; }
+    if (gt.side === 'north' ? player.wy < gt.y + 30 : player.wy > gt.y + 22) { goToLevel(gt.to); break; }     // lobby: encostou no portal, já entra
   }
 
   if (keys.Space && player.z === 0) { player.vz = JUMP_V; Sound.jump(); }

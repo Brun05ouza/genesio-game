@@ -1,14 +1,25 @@
 import os as _os; _os.chdir(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))   # roda a partir da raiz do projeto
-# Extrai as 20 poses do Golem (folha com etiquetas) e salva ancoradas pelos pes
+"""Extrai as 20 poses do Golem (folha com etiquetas "1. IDLE A" ...) para fase-solar-do-bosque/sprites/gb0..19.png,
+todas no mesmo tamanho e ancoradas pelos pés (a âncora é impressa no fim: copie para M.gb em solar.js se mudar).
+
+Como recorta (sem buracos e sem pedaços dos vizinhos):
+ 1. Fundo = pixels claros e sem cor LIGADOS À BORDA da folha (preenchimento). O contorno escuro do pixel art impede que
+    o preenchimento entre no golem, então brilhos das pedras, olhos e detalhes claros por dentro ficam intactos.
+    A sombra cinza-clara do chão também sai (está ligada ao fundo).
+ 2. Buracos internos de branco puro e grandes (vão entre braço e corpo, dentro da corrente) também viram fundo.
+ 3. As etiquetas escuras são apagadas e cada pedaço restante (golem, bola, estrelas, pedrinhas, rastros) vai para o
+    quadro cuja etiqueta está logo abaixo dele e mais perto na horizontal.
+ 4. Tira o halo claro de 1-2 px que sobra na borda."""
 from PIL import Image
 import numpy as np, cv2
 from scipy import ndimage as nd
+
 D = 'fase-solar-do-bosque'; OUT = D + '/sprites'
-im = Image.open(f'{D}/Pixel Golem Boss Sprite Sheet.png').convert('RGB'); A = np.array(im); H, W = A.shape[:2]
-Ai = A.astype(int)
-# etiquetas: retangulos escuros (navy) com texto claro
-chip = (Ai.max(axis=2) < 75)
-chip = nd.binary_closing(chip, structure=np.ones((5, 15)))
+A = np.array(Image.open(f'{D}/Pixel Golem Boss Sprite Sheet.png').convert('RGB')); H, W = A.shape[:2]
+Ai = A.astype(int); mn, mx = Ai.min(axis=2), Ai.max(axis=2); sat = mx - mn
+
+# ---- etiquetas (retângulos escuros com texto claro) ----
+chip = nd.binary_closing(mx < 75, structure=np.ones((5, 15)))
 lab, n = nd.label(chip)
 chips = []
 for i, sl in enumerate(nd.find_objects(lab), 1):
@@ -16,77 +27,66 @@ for i, sl in enumerate(nd.find_objects(lab), 1):
     if 90 < w < 260 and 18 < h < 40 and (lab[sl] == i).mean() > 0.7:
         chips.append((sl[1].start, sl[0].start, sl[1].stop, sl[0].stop))
 chips.sort(key=lambda c: (round(c[1] / 120), c[0]))
-print('etiquetas', len(chips))
+assert len(chips) == 20, f'esperava 20 etiquetas, achei {len(chips)}'
 chipm = np.zeros((H, W), bool)
-for x0, y0, x1, y1 in chips: chipm[y0 - 3:y1 + 3, x0 - 3:x1 + 3] = True
-non = ((Ai.min(axis=2) < 200) | ((Ai.max(axis=2) - Ai.min(axis=2)) > 45)) & ~chipm
-non = nd.binary_opening(non, iterations=1)
-# linhas de etiquetas -> faixas verticais; dentro de cada faixa separa os quadros pelas colunas vazias
-rows = {}
-for k, c in enumerate(chips): rows.setdefault(round(c[1] / 120), []).append(k)
-frames = [None] * len(chips)
-prev_bottom = 0
-for rk in sorted(rows):
-    ks = rows[rk]; ytop = prev_bottom; ybot = min(chips[k][1] for k in ks)
-    prev_bottom = max(chips[k][3] for k in ks) + 2
-    band = non[ytop:ybot]
-    col = band.sum(axis=0) > 0
-    col = nd.binary_closing(col, structure=np.ones(9))
-    lab1, n1 = nd.label(col)
-    segs = [(sl[0].start, sl[0].stop) for sl in nd.find_objects(lab1) if sl[0].stop - sl[0].start > 80]
-    print('faixa', rk, 'etiquetas', len(ks), 'quadros por vazio', len(segs))
-    if len(segs) != len(ks):                       # fallback: fronteiras no meio das etiquetas
-        xs_c = [(chips[k][0] + chips[k][2]) / 2 for k in ks]
-        bounds = [0] + [(xs_c[i] + xs_c[i + 1]) / 2 for i in range(len(xs_c) - 1)] + [W]
-        segs = [(int(bounds[i]), int(bounds[i + 1])) for i in range(len(ks))]
-    for k, (x0, x1) in zip(ks, segs):
-        m = np.zeros((H, W), bool); m[ytop:ybot, x0:x1] = non[ytop:ybot, x0:x1]
-        ys, xs = np.where(m)
-        if len(ys) == 0: continue
-        sl = (slice(ys.min(), ys.max() + 1), slice(xs.min(), xs.max() + 1))
-        frames[k] = (sl, m)
+for x0, y0, x1, y1 in chips: chipm[y0 - 4:y1 + 4, x0 - 4:x1 + 4] = True
+
+# ---- fundo: claro e sem cor, ligado à borda ----
+bgish = ((mn > 168) & (sat < 34)) | chipm
+lb, _ = nd.label(bgish)
+edge = np.unique(np.concatenate([lb[0], lb[-1], lb[:, 0], lb[:, -1]])); edge = edge[edge > 0]
+bg = np.isin(lb, edge) | chipm
+# buracos internos grandes de branco puro (vãos), não os brilhos pequenos
+white = (mn > 236) & (sat < 16) & ~bg
+lw, nw = nd.label(white)
+if nw:
+    sz = nd.sum(white, lw, range(1, nw + 1))
+    bg |= np.isin(lw, 1 + np.where(sz > 160)[0])
+# halo claro na borda: pixel claro/sem cor encostado no fundo vira fundo (2 passadas)
+for _ in range(2):
+    ring = nd.binary_dilation(bg) & ~bg
+    bg |= ring & (mn > 150) & (sat < 40)
+fg = ~bg
+fg = nd.binary_opening(fg, structure=np.ones((2, 2)))
+
+# ---- cada pedaço vai para o quadro certo ----
+lf, nf = nd.label(fg, structure=np.ones((3, 3)))
+cent = nd.center_of_mass(fg, lf, range(1, nf + 1))
+area = nd.sum(fg, lf, range(1, nf + 1))
+rows = sorted({round(c[1] / 120) for c in chips})
+row_top = {}                                   # topo de cada faixa = fim das etiquetas da faixa de cima
+prev = 0
+for r in rows:
+    ks = [k for k, c in enumerate(chips) if round(c[1] / 120) == r]
+    row_top[r] = (prev, min(chips[k][1] for k in ks), ks)
+    prev = max(chips[k][3] for k in ks)
+owner = np.zeros(nf + 1, int) - 1
+for j, ((cy, cx), a) in enumerate(zip(cent, area), 1):
+    if a < 25: continue                        # poeira de 1-2 pixels
+    for r, (t, b, ks) in row_top.items():
+        if t <= cy < b + 6:
+            owner[j] = min(ks, key=lambda k: abs((chips[k][0] + chips[k][2]) / 2 - cx)); break
+
 cells = []
-for k, f in enumerate(frames):
-    sl, m = f
-    y0, y1, x0, x1 = max(0, sl[0].start - 6), min(H, sl[0].stop + 6), max(0, sl[1].start - 6), min(W, sl[1].stop + 6)
-    roi = np.zeros((H, W), bool); roi[y0:y1, x0:x1] = nd.binary_dilation(m, iterations=6)[y0:y1, x0:x1]
-    crop = A[y0:y1, x0:x1]
-    # fundo branco ligado a borda sai; so mantem o que esta dentro do ROI do grupo (nao pega vizinhos)
-    cl = Ai[y0:y1, x0:x1]
-    light = (cl.min(axis=2) > 205) & ((cl.max(axis=2) - cl.min(axis=2)) < 30)
-    lb, nb = nd.label(light)
-    edge = set(np.unique(np.concatenate([lb[0], lb[-1], lb[:, 0], lb[:, -1]]))) - {0}
-    bg = np.isin(lb, list(edge))
-    keep = ~bg & roi[y0:y1, x0:x1]
-    keep &= ~light                                  # branco puro nunca faz parte do golem (buracos entre as pernas)
-    sh = (cl.min(axis=2) > 170) & ((cl.max(axis=2) - cl.min(axis=2)) < 22)
-    keep &= ~(sh & ~nd.binary_erosion(keep, iterations=4))
-    keep = nd.binary_opening(keep, iterations=1)
-    lb2, n2 = nd.label(keep); s2 = nd.sum(keep, lb2, range(1, n2 + 1))
-    mi = 1 + int(np.argmax(s2)); yy, xx = np.where(lb2 == mi)
-    bx0, bx1, by0, by1 = xx.min() - 55, xx.max() + 55, yy.min() - 55, yy.max() + 55
-    ok = [mi]
-    for j, v in enumerate(s2):
-        if j + 1 == mi or v < 40: continue
-        y_, x_ = np.where(lb2 == j + 1)
-        if bx0 <= x_.mean() <= bx1 and by0 <= y_.mean() <= by1: ok.append(j + 1)
-    keep = np.isin(lb2, ok)
-    rgba = np.dstack([crop, (keep * 255).astype(np.uint8)])
-    ys, xs = np.where(keep); rgba = rgba[ys.min():ys.max() + 1, xs.min():xs.max() + 1]; kk = keep[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
-    # ancora: centro dos pes (parte baixa) e base
-    yy, xx = np.where(kk); low = yy > yy.max() - 22
-    ax, ay = xx[low].mean(), yy.max()
-    cells.append((rgba, (ax, ay)))
+for k in range(20):
+    keep = np.isin(lf, np.where(owner == k)[0])
+    ys, xs = np.where(keep)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    kk = keep[y0:y1, x0:x1]
+    rgba = np.dstack([A[y0:y1, x0:x1], (kk * 255).astype(np.uint8)])
+    # âncora: centro dos pés do maior pedaço (o golem), na base dele
+    big = lf[y0:y1, x0:x1] == (1 + int(np.argmax(np.where(owner[1:] == k, area, 0))))
+    yy, xx = np.where(big); low = yy > yy.max() - 22
+    cells.append((rgba, (xx[low].mean(), yy.max())))
+
 L = max(a[0] for _, a in cells); R = max(f.shape[1] - a[0] for f, a in cells)
 T = max(a[1] for _, a in cells); B = max(f.shape[0] - a[1] for f, a in cells)
-Wc, Hc = int(L + R + 2), int(T + B + 2)
-SC = 1.0
+Wc, Hc = int(np.ceil(L + R)) + 2, int(np.ceil(T + B)) + 2
 for i, (f, (ax, ay)) in enumerate(cells):
-    c = Image.new('RGBA', (Wc, Hc), (0, 0, 0, 0)); c.paste(Image.fromarray(f), (int(L - ax), int(T - ay)), Image.fromarray(f))
-    c = c.resize((round(Wc * SC), round(Hc * SC)), Image.NEAREST); c.save(f'{OUT}/gb{i}.png')
-print('gb', len(cells), (round(Wc * SC), round(Hc * SC)), 'ancora', (round(L * SC), round(T * SC)))
-w, h = round(Wc * SC), round(Hc * SC)
-sh = Image.new('RGBA', (w * 5, h * 4), (150, 190, 150, 255))
-for i in range(len(cells)):
-    sh.alpha_composite(Image.open(f'{OUT}/gb{i}.png'), ((i % 5) * w, (i // 5) * h))
-sh.thumbnail((1500, 1100)); sh.save('sheet_gb_tmp.png')
+    c = Image.new('RGBA', (Wc, Hc), (0, 0, 0, 0)); im = Image.fromarray(f)
+    c.paste(im, (int(round(L - ax)), int(round(T - ay))), im); c.save(f'{OUT}/gb{i}.png', optimize=True)
+print('gb 20', (Wc, Hc), 'ancora (M.gb ax, ay):', (int(round(L)), int(round(T))))
+_os.makedirs('tools/out', exist_ok=True)
+sh = Image.new('RGBA', (Wc * 5, Hc * 4), (255, 0, 255, 255))
+for i in range(20): sh.alpha_composite(Image.open(f'{OUT}/gb{i}.png'), ((i % 5) * Wc, (i // 5) * Hc))
+sh.save('tools/out/golem-contact.png')

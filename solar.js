@@ -9,7 +9,7 @@ const Solar = (() => {
   const CHARGE_DELAY = .22, CHARGE_FULL = 1.1;
   const MAXHP = 5, BOSS_HP = 40, GS = 1.15, BS = 2.0, REWARD = 150, COIN_VALUE = 2;
   const ARENA_X = (NIMG - 1) * PITCH, ARENA_TRIGGER = ARENA_X + 300, CAM_ARENA = WORLD_W - VIEW_W;
-  const M = { hm: { w: 230, h: 166, ax: 101, ay: 154 }, hh: { w: 182, h: 127, ax: 95, ay: 124 }, gb: { w: 410, h: 240, ax: 163, ay: 237 } };
+  const M = { hm: { w: 230, h: 166, ax: 101, ay: 154 }, hh: { w: 182, h: 127, ax: 95, ay: 124 }, gb: { w: 445, h: 297, ax: 170, ay: 240 } };
   M.run = { ax: 95, ay: 154 };
   M.motion = { ax: 115, ay: 198 };
   const el = id => document.getElementById(id);

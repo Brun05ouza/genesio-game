@@ -46,6 +46,15 @@ for i in range(1, n_p):
         lamps += 1
 print('postes encontrados:', lamps)
 cv2.ellipse(blocked, (627, 535), (122, 100), 0, 0, 360, 255, -1)        # fonte
+# arbustos e canteiros da praça (dentro dos muros) não têm física: dá para andar por cima deles.
+# Continuam sólidos: fonte, bancos, postes, as duas árvores grandes de baixo e os muros/pilares.
+PLAZA = (280, 205, 975, 945)
+BENCHES = [(483, 315, 566, 368), (690, 315, 773, 368), (402, 397, 444, 468), (811, 397, 854, 468),
+           (402, 619, 444, 693), (811, 619, 854, 693), (480, 735, 563, 780), (690, 735, 773, 780)]
+TRUNKS = [(385, 875, 422, 930), (830, 875, 867, 930)]
+for x0, y0, x1, y1 in BENCHES + TRUNKS: blocked[y0:y1, x0:x1] = 255
+px0, py0, px1, py1 = PLAZA
+floor[py0:py1, px0:px1] = 255
 floor[blocked > 0] = 0
 
 floor = cv2.erode(floor, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)))   # margem de 5 px
