@@ -3,9 +3,9 @@
 // Moedas (G alado) dão pontos; o capacete é um buff que ignora 2 batidas.
 const Runner = (() => {
   const DIFFS = {
-    facil:   { label: 'Fácil',   lives: 5, v0: 320, vmax: 520, accel: 7,  gap: [1.1, 2.0],  maxCluster: 2, bigChance: 0.4,  hammerChance: 0.2,  hammerHigh: false, helmetEvery: [4500, 7000], heartEvery: [6500, 9500] },
-    normal:  { label: 'Normal',  lives: 3, v0: 420, vmax: 700, accel: 11, gap: [0.95, 1.7], maxCluster: 2, bigChance: 0.5,  hammerChance: 0.28, hammerHigh: true,  helmetEvery: [6000, 9000], heartEvery: [6500, 9500] },
-    dificil: { label: 'Difícil', lives: 2, v0: 520, vmax: 900, accel: 15, gap: [0.8, 1.4],  maxCluster: 3, bigChance: 0.55, hammerChance: 0.35, hammerHigh: true,  helmetEvery: [7500, 11000], heartEvery: [5000, 8000] },
+    facil:   { label: 'Fácil',   lives: 5, v0: 320, vmax: 520, accel: 7,  step: 30, vtop: 820,  gap: [1.1, 2.0],  maxCluster: 2, bigChance: 0.4,  hammerChance: 0.2,  hammerHigh: false, helmetEvery: [4500, 7000], heartEvery: [6500, 9500] },
+    normal:  { label: 'Normal',  lives: 3, v0: 420, vmax: 700, accel: 11, step: 40, vtop: 1050, gap: [0.95, 1.7], maxCluster: 2, bigChance: 0.5,  hammerChance: 0.28, hammerHigh: true,  helmetEvery: [6000, 9000], heartEvery: [6500, 9500] },
+    dificil: { label: 'Difícil', lives: 2, v0: 520, vmax: 900, accel: 15, step: 50, vtop: 1300, gap: [0.8, 1.4],  maxCluster: 3, bigChance: 0.55, hammerChance: 0.35, hammerHigh: true,  helmetEvery: [7500, 11000], heartEvery: [5000, 8000] },
   };
   const VW = 1280, VH = 720;
   const S = VH / 941;                 // escala da imagem do cenário (1672x941) para a tela
@@ -49,6 +49,10 @@ const Runner = (() => {
   const setBest = (d, v) => { try { localStorage.setItem(bestKey(d), v); } catch (e) {} };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const points = () => Math.floor(g.dist / 10) + g.bonus;
+  // velocidade cresce com os pontos: no começo acelera até vmax e, a cada LEVEL_PTS pontos, sobe mais `step` (até vtop)
+  const LEVEL_PTS = 500;
+  const speedLevel = () => Math.floor(points() / LEVEL_PTS);
+  const targetSpeed = () => Math.min(g.d.vtop, g.d.vmax + g.d.step * speedLevel());
 
   function newGame(diffKey) {
     const d = DIFFS[diffKey];
@@ -215,7 +219,14 @@ const Runner = (() => {
     if (frozen) f = 0;
     else if (fxKind === 'lose') f = 0.25;
     if (g.phase === 'dying') { g.deadT += dt; f = Math.max(0, 1 - g.deadT / 0.5); }
-    else if (f > 0) g.speed = Math.min(g.d.vmax, g.speed + g.d.accel * dt);
+    else if (f > 0) {
+      const lv = speedLevel();
+      if (lv > (g.level || 0)) {                                   // subiu de nível: avisa (até chegar no máximo)
+        g.level = lv;
+        if (g.speed < g.d.vtop - 1) { popup('MAIS RÁPIDO!', PX + 120, FEET - 230, '#ffd166'); Sound.coin(); }
+      }
+      g.speed = Math.min(targetSpeed(), g.speed + g.d.accel * (g.speed < g.d.vmax ? 1 : 2.5) * dt);
+    }
     const dx = g.speed * f * dt;
     g.scroll += dx; g.dist += dx;
 
