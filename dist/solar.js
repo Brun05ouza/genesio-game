@@ -347,7 +347,7 @@ const Solar = (() => {
   }
 
   // ---- conversa entre o Genésio e o Golem (estilo Pokémon: toque/clique/Enter passa) ----
-  const GENESIO_PIC = DIR + 'sprites/hm1.webp', GOLEM_PIC = DIR + 'sprites/gb10.webp';
+  const GENESIO_PIC = DIR + 'sprites/hm1.webp', GOLEM_PIC = DIR + 'sprites/golem-portrait.webp';
   const TALK = {
     intro: [
       { who: 'Golem Demolidor', boss: true, text: 'QUEM OUSA PISAR NO MEU BOSQUE?!' },

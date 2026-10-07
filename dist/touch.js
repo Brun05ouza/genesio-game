@@ -140,7 +140,7 @@
   let curMode = null;
   function sync() {
     frame++; flushReleases();
-    const menuOpen = !!document.querySelector('.screen.active');              // pausa, resultado, pergunta...
+    const menuOpen = !!document.querySelector('.screen.active') || (typeof Talk !== 'undefined' && Talk.isActive());   // menu ou conversa aberta              // pausa, resultado, pergunta...
     const mode = body.classList.contains('touch') && !menuOpen && typeof state !== 'undefined' ? STATE_MODE[state] : null;
     if (mode !== curMode) {
       if (curMode) { joyEnd(); releaseAll(); touchAim.set = false; root.querySelectorAll('.aim-ring').forEach(r => r.classList.remove('on')); }

@@ -11,7 +11,7 @@ from PIL import Image
 sys.stdout.reconfigure(encoding='utf-8')
 files = json.load(open('build-files.json', encoding='utf-8'))
 # arquivos do app instalável / carregador, que o rastreador de rede não enxerga
-EXTRA = sorted('frames/' + f for f in os.listdir('frames') if f.endswith('.png')) + ['fase-teresopolis/teresopolis-arco.png', 'fase-solar-do-bosque/sprites/nail.png', 'fase-solar-do-bosque/sprites/nail-box.png', 'fase-teresopolis/teresopolis-mapa.png', 'fase-teresopolis/teresopolis-colisao.png', 'map/lobby-mask.png', 'assets/lobby-loading.jpg', 'loader.js', 'talk.js', 'pwa.js', 'sw.js', 'manifest.webmanifest', 'favicon.ico'] + sorted('icons/' + f for f in os.listdir('icons') if f.endswith('.png'))
+EXTRA = ['assets/iguacu-loading.jpg', 'fase-solar-do-bosque/sprites/golem-portrait.png'] + sorted('frames/' + f for f in os.listdir('frames') if f.endswith('.png')) + ['fase-teresopolis/teresopolis-arco.png', 'fase-solar-do-bosque/sprites/nail.png', 'fase-solar-do-bosque/sprites/nail-box.png', 'fase-teresopolis/teresopolis-mapa.png', 'fase-teresopolis/teresopolis-colisao.png', 'map/lobby-mask.png', 'assets/lobby-loading.jpg', 'loader.js', 'talk.js', 'pwa.js', 'sw.js', 'manifest.webmanifest', 'favicon.ico'] + sorted('icons/' + f for f in os.listdir('icons') if f.endswith('.png'))
 files = sorted((set(files) | set(EXTRA)) - {'fase-teresopolis/Isometric Modern Residential Complex.png', 'fase-teresopolis/water-mask.png'})   # o mapa antigo (com fundo azul) não vai mais
 
 LOSSLESS_HINT = ('mask', 'sheet')        # máscaras e a folha de sprites são lidas pixel a pixel: nunca com perdas

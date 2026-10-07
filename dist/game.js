@@ -13,7 +13,7 @@ let mapImg = new Image();
 // fases: cada uma tem seu mapa; encostar na borda de baixo leva à próxima
 const LEVELS = {
   praca:  { file: MAP_FILE, start: [627, 780], next: 'iguacu', name: 'Lobby', enter: 'Voltando para o Lobby', mask: 'map/lobby-mask.webp' },   // colisão: fonte, canteiros, bancos, postes, muros e árvores
-  iguacu: { file: 'fase-nova-igua%C3%A7u/map-nova-igua%C3%A7u.webp', start: [630, 1215], next: 'praca', name: 'Nova Iguaçu', enter: 'Entrando na área de Nova Iguaçu' },
+  iguacu: { file: 'fase-nova-igua%C3%A7u/map-nova-igua%C3%A7u.webp', start: [630, 1215], next: 'praca', name: 'Nova Iguaçu', enter: 'Entrando na área de Nova Iguaçu', theme: 'iguacu' },
   // mapa isométrico grande (1448x1086): zoom baixo para ver bastante do mapa, e Genésio menor para manter a proporção com bancos, carros e postes
   teresopolis: {
     file: 'fase-teresopolis/teresopolis-mapa.webp',
@@ -375,7 +375,7 @@ let state = 'loading', started = false;
 function show(name) {
   if (name !== 'talk' && typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip();      // saiu da conversa por outro caminho (menu, etc.)
   state = name;
-  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'lvload']) $(id).classList.toggle('active', id === name);
+  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'iguacu', 'lvload']) $(id).classList.toggle('active', id === name);
   if (name !== 'runner') $('rOverlay').classList.remove('active');
   if (name !== 'nplay') $('nOverlay').classList.remove('active');
   if (name !== 'kplay') $('kOverlay').classList.remove('active');
@@ -452,10 +452,10 @@ async function goToLevel(id) {
   const lv = LEVELS[id], fromLevel = levelId;
   toast(lv.enter, 2600);
   $('desertTitle').textContent = lv.name;
-  const scr = lv.theme === 'serra' ? 'serra' : id === 'praca' ? 'loading' : 'desert';      // lobby: a mesma arte do carregamento inicial
+  const scr = lv.theme === 'serra' ? 'serra' : lv.theme === 'iguacu' ? 'iguacu' : id === 'praca' ? 'loading' : 'desert';      // lobby: a mesma arte do carregamento inicial
   await wait(1600);
   show(scr); state = 'transition';
-  const bar = $({ serra: 'serraFill', loading: 'barFill' }[scr] || 'desertFill'), txt = $({ serra: 'serraText', loading: 'loadText' }[scr] || 'desertText');
+  const bar = $({ serra: 'serraFill', iguacu: 'iguacuFill', loading: 'barFill' }[scr] || 'desertFill'), txt = $({ serra: 'serraText', iguacu: 'iguacuText', loading: 'loadText' }[scr] || 'desertText');
   const tips = lv.tips || ['Aquecendo o asfalto...', 'Procurando o caminho...', 'Espantando os urubus...', 'Quase lá...'];
   const t0 = performance.now(), MIN = 3500;
   bar.style.width = '0%';
@@ -543,12 +543,14 @@ function refreshBests() {
 }
 // carrega uma fase mostrando progresso; se a rede falhar oferece tentar de novo. Só aparece se demorar (evita piscar quando já está em cache)
 let lvToken = 0;
-async function loadWithScreen(title, starter, onOk, onBack) {
+// art (opcional): { screen, fill, text, label } = usa uma tela com arte própria (ex.: Oásis com a arte de Nova Iguaçu)
+async function loadWithScreen(title, starter, onOk, onBack, art) {
   const token = ++lvToken;
   for (const k in keys) keys[k] = false;
   Loader.reset(); state = 'lvload';
-  const showTimer = setTimeout(() => { if (token !== lvToken) return; $('lvTitle').textContent = title; $('lvFill').style.width = '0%'; $('lvText').textContent = 'Baixando... 0%'; $('lvErr').hidden = true; $('lvload').classList.remove('err'); show('lvload'); state = 'lvload'; }, 120);
-  Loader.onProgress = (d, t) => { const p = t ? Math.round(d / t * 100) : 0; $('lvFill').style.width = p + '%'; $('lvText').textContent = `Baixando... ${p}%`; };
+  const fill = $(art ? art.fill : 'lvFill'), text = $(art ? art.text : 'lvText'), label = art ? art.label : 'Baixando...';
+  const showTimer = setTimeout(() => { if (token !== lvToken) return; $('lvTitle').textContent = title; fill.style.width = '0%'; text.textContent = label + ' 0%'; $('lvErr').hidden = true; $('lvload').classList.remove('err'); show(art ? art.screen : 'lvload'); state = 'lvload'; }, 120);
+  Loader.onProgress = (d, t) => { const p = t ? Math.round(d / t * 100) : 0; fill.style.width = p + '%'; text.textContent = `${label} ${p}%`; };
   try { await starter(); }
   catch (e) {
     clearTimeout(showTimer); Loader.onProgress = null; console.error(e);
@@ -556,7 +558,7 @@ async function loadWithScreen(title, starter, onOk, onBack) {
     show('lvload'); state = 'lvload'; $('lvTitle').textContent = title; $('lvload').classList.add('err');
     $('lvText').textContent = navigator.onLine === false ? 'Sem internet. Conecte-se e tente de novo.' : 'Não foi possível carregar a fase. Verifique a conexão.';
     $('lvErr').hidden = false;
-    $('lvRetry').onclick = () => loadWithScreen(title, starter, onOk, onBack);
+    $('lvRetry').onclick = () => loadWithScreen(title, starter, onOk, onBack, art);
     $('lvBack').onclick = () => { lvToken++; onBack(); };
     return;
   }
@@ -565,7 +567,7 @@ async function loadWithScreen(title, starter, onOk, onBack) {
   onOk();
 }
 async function beginRun(diff) {
-  await loadWithScreen('Oásis Residencial', () => Runner.start(diff), () => show('runner'), () => show('oasis'));
+  await loadWithScreen('Oásis Residencial', () => Runner.start(diff), () => show('runner'), () => show('oasis'), { screen: 'iguacu', fill: 'iguacuFill', text: 'iguacuText', label: 'Preparando o Oásis Residencial...' });
 }
 function exitRunner() { Runner.stop(); promptBlocked = true; show('playing'); }
 
