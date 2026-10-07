@@ -23,7 +23,7 @@ const LEVELS = {
     exitSouth: { y: 945, x0: 600, x1: 800, to: 'praca' },
     front: { file: 'fase-teresopolis/teresopolis-arco.webp', x: 556, y: 800 },   // arco desenhado por cima do Genésio (ele passa por trás/por baixo); veja tools/make_serra_arch.py   // passou do arco (já fora do condomínio): volta para o lobby
     name: 'Teresópolis', enter: 'Entrando na área de Teresópolis', theme: 'serra',
-    tips: ['Subindo a serra...', 'Respirando ar fresco...', 'Procurando o Oásis...', 'Quase lá...'],
+    tips: ['Subindo a serra...', 'Ligando a nave do Flow...', 'Acordando o Golem do Solar do Bosque...', 'Separando os EPIs do Nature...', 'Quase lá...'],
   },
 };
 // onde o Genésio reaparece ao voltar de uma fase para outra
@@ -468,7 +468,7 @@ async function goToLevel(id) {
   while (!img || (lv.mask && !mask) || (lv.waterExit && !water) || performance.now() - t0 < MIN) {
     const p = Math.min((performance.now() - t0) / MIN, 1) * (img ? 100 : 90);
     bar.style.width = p + '%';
-    txt.textContent = scr === 'loading' ? `Voltando para o lobby... ${Math.round(p)}%` : tips[Math.min(3, Math.floor(p / 26))];
+    txt.textContent = scr === 'loading' ? `Voltando para o lobby... ${Math.round(p)}%` : tips[Math.min(tips.length - 1, Math.floor(p / 100 * tips.length))];
     await wait(60);
   }
   bar.style.width = '100%';

@@ -55,9 +55,15 @@ for name in out:
 h = hashlib.sha1()
 for name in sorted(out): h.update(name.encode()); h.update(open(os.path.join('dist', name), 'rb').read())
 version = h.hexdigest()[:10]
+# index.html pede CSS/JS com ?v=versão: depois de publicar, a página nova nunca usa um CSS/JS velho guardado no aparelho
+p = os.path.join('dist', 'index.html'); s = open(p, encoding='utf-8').read()
+s = re.sub(r'(<link[^>]+href=")(?!https?:)([^"?]+\.css)(")', lambda m: m.group(1) + m.group(2) + '?v=' + version + m.group(3), s)
+s = re.sub(r'(<script[^>]+src=")(?!https?:)([^"?]+\.js)(")', lambda m: m.group(1) + m.group(2) + '?v=' + version + m.group(3), s)
+open(p, 'w', encoding='utf-8').write(s)
+vq = lambda n: n + '?v=' + version if n.endswith(('.js', '.css')) and n != 'sw.js' else n
 core = ['./'] + [n for n in out if n != 'sw.js' and (n.endswith(('.js', '.css', '.html', '.webmanifest', '.ico')) or n.startswith('icons/') or n.startswith('assets/menu') or n.startswith('assets/lobby') or n.startswith('assets/settings'))]
 p = os.path.join('dist', 'sw.js'); s = open(p, encoding='utf-8').read()
-s = s.replace("const VERSION = 'dev';", "const VERSION = '%s';" % version).replace('const CORE = [];', 'const CORE = %s;' % json.dumps(core, ensure_ascii=False))
+s = s.replace("const VERSION = 'dev';", "const VERSION = '%s';" % version).replace('const CORE = [];', 'const CORE = %s;' % json.dumps([vq(n) for n in core], ensure_ascii=False))
 open(p, 'w', encoding='utf-8').write(s)
 
 print('dist/: %d arquivos, %.1f MB (original %.1f MB), cache %s' % (len(out), after / 1e6, before / 1e6, version))
