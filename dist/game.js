@@ -78,6 +78,7 @@ for (const [name, n] of Object.entries(ANIMS)) {
 
 // ---- estado ----
 const keys = {};
+const ARROW = { ArrowLeft: 'KeyA', ArrowRight: 'KeyD', ArrowUp: 'KeyW', ArrowDown: 'KeyS' };
 addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     if (state === 'talk') Talk.skip();
@@ -97,9 +98,10 @@ addEventListener('keydown', e => {
     return;
   }
   keys[e.code] = true;
+  if (ARROW[e.code]) { keys[ARROW[e.code]] = true; e.preventDefault(); }   // setas = WASD em todo o jogo
   if (e.code === 'Space') e.preventDefault();
 });
-addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('keyup', e => { keys[e.code] = false; if (ARROW[e.code]) keys[ARROW[e.code]] = false; });
 
 const player = {
   wx: 627, wy: 780,   // posição no mundo (mapa fixo, sem repetir)
