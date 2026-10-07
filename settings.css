@@ -36,3 +36,14 @@
 #settings #btnBack.mhot{left:45.2%;top:65.9%;width:9.7%;height:8.1%;border-radius:1.5cqw;font-size:0;color:transparent;background:transparent;border:0;box-shadow:none;padding:0;position:absolute;margin:0;transform:none;cursor:pointer}
 #settings #btnBack.mhot:hover,#settings #btnBack.mhot:focus-visible{background:rgba(255,255,255,.16);box-shadow:0 0 0 .22cqw rgba(255,255,255,.85),0 0 1.8cqw .5cqw rgba(255,226,120,.75);outline:none}
 #settings #btnBack.mhot:active{transform:translateY(.25cqw)}
+
+/* "Inverter botões" só existe no celular: o painel cresce e as linhas se redistribuem */
+.srow.r4{display:none}
+.srow.r4 .sbtn{left:52%;min-width:6cqw}
+.srow.r4 .sbtn[aria-pressed="true"]{background:#f4b631;color:#2a1d05}
+.touch .srow.r4{display:block}
+.touch .spanel{top:33.4%;height:30.6%}                 /* termina antes do botão Voltar (que faz parte da arte, em 65.9%) */
+.touch .srow.r1{top:13.5%!important}.touch .srow.r2{top:37.5%!important}.touch .srow.r3{top:61.5%!important}.touch .srow.r4{top:85.5%!important}
+.touch .srow .lbl{font-size:1.75cqw}
+.touch .srow .sbtn{font-size:1.55cqw;padding:.32cqw 1.3cqw}
+.touch .srow .icon{width:2.35cqw;height:2.35cqw}

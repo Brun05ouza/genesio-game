@@ -27,7 +27,7 @@ const Solar = (() => {
     const jobs = [
       get(OASIS + 'heart.webp').then(i => imgs.heart = i), get(OASIS + 'heart_empty.webp').then(i => imgs.heartEmpty = i),
       get(DIR + 'sprites/fly.webp').then(i => imgs.mobFly = i), get(DIR + 'sprites/rock.webp').then(i => imgs.mobRock = i),
-      get(OASIS + 'hammer.webp').then(i => imgs.hammer = i), get(OASIS + 'helmet.webp').then(i => imgs.helmet = i),
+      get(OASIS + 'hammer.webp').then(i => imgs.hammer = i), get(DIR + 'sprites/nail.webp').then(i => imgs.nail = i), get(DIR + 'sprites/nail-box.webp').then(i => imgs.nailBox = i),
       ...['fly_body', 'fly_wingL', 'fly_wingR', 'fly_clawL', 'fly_clawR', 'rock_body', 'rock_armL', 'rock_armR', 'rock_legL', 'rock_legR']
         .map(n => get(DIR + 'sprites/' + n + '.webp').then(i => imgs.part[n] = i)),
       get(DIR + 'genesio-movement-sheet.webp').then(i => imgs.movementSheet = i),
@@ -180,7 +180,7 @@ const Solar = (() => {
     hideOverlay();
   }
   async function start() { await load(); newGame(false); running = true; }
-  function stop() { running = false; hideOverlay(); unload(); }
+  function stop() { running = false; if (typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip(); hideOverlay(); unload(); }
   // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
   function unload() { imgs = null; loading = null; }
   // sair no meio da fase: guarda as moedas dos mobs derrotados (uma vez) e fecha a fase
@@ -203,6 +203,7 @@ const Solar = (() => {
     el('sOverlay').classList.add('active');
   }
   function togglePause() {
+    if (g && g.talking) return;                                // na conversa, quem fecha é o Esc/Pular da própria conversa
     if (!running || g.ended) return;
     g.paused = !g.paused;
     cancelAttackInput();
@@ -324,6 +325,57 @@ const Solar = (() => {
     if (g.boss && !h.hit.has('boss') && sweptHammerHit(oldX, oldY, h.x, h.y, bossHurtbox()) && damageBoss(h.damage)) h.hit.add('boss');
   }
 
+  // ---- cura ao chegar no boss: os corações se enchem um a um, com brilho verde e corações subindo ----
+  function healUpdate(dt) {
+    const h = g.heal; h.t += dt;
+    const t0 = .55;
+    if (!reducedMotion.matches || h.filled === 0) {
+      if (Math.random() < dt * 34) g.parts.push({ k: 'heal', x: g.x + rnd(-34, 34), y: g.y - rnd(8, 120), vx: rnd(-18, 18), vy: -rnd(80, 190), life: .95, t: 0, s: rnd(.8, 1.6), rot: 0, vr: 0, c: 0 });
+    }
+    while (h.filled < h.need && h.t >= t0 + h.filled * .32) {
+      g.hp++; h.filled++; g.pulse[g.hp - 1] = g.t;
+      Sound.coin(); g.hitstop = 0;
+      popup('+1', g.x + rnd(-24, 24), g.y - 150, '#b8ffcf');
+      for (let i = 0; i < 3; i++) g.parts.push({ k: 'healHeart', x: g.x + rnd(-40, 40), y: g.y - rnd(40, 110), vx: rnd(-30, 30), vy: -rnd(110, 210), life: 1.1, t: 0, s: rnd(.8, 1.2), rot: 0, vr: 0, c: 0 });
+    }
+    if (!h.done && h.t >= t0 + h.need * .32 + .1) {
+      h.done = true; g.flash = .3; Sound.power();
+      popup(h.need > 0 ? 'VIDA RESTAURADA!' : 'VIDA CHEIA!', g.x, g.y - 190, '#b8ffcf');
+      stars(g.x, g.y - 90, 12);
+    }
+    if (h.t >= h.dur) g.heal = null;
+  }
+
+  // ---- conversa entre o Genésio e o Golem (estilo Pokémon: toque/clique/Enter passa) ----
+  const GENESIO_PIC = DIR + 'sprites/hm1.webp', GOLEM_PIC = DIR + 'sprites/gb10.webp';
+  const TALK = {
+    intro: [
+      { who: 'Golem Demolidor', boss: true, text: 'QUEM OUSA PISAR NO MEU BOSQUE?!' },
+      { who: 'Genésio', text: 'Eu sou o Genésio! Vim ajudar o bosque e todo mundo que mora aqui.' },
+      { who: 'Golem Demolidor', boss: true, text: 'Ajudar? Com esse martelinho de brinquedo? Ha! Vou te transformar em pedregulho!' },
+      { who: 'Genésio', text: 'Esse martelo já construiu muita coisa por aí... e agora vai consertar a sua má educação!' },
+      { who: 'Golem Demolidor', boss: true, text: 'Então venha, pequeno cubo! Não vou pegar leve!' },
+      { who: 'Genésio', text: 'Eu também não! E tenho uns pregos guardados para você. Vamos lá!' },
+    ],
+    fury: [
+      { who: 'Golem Demolidor', boss: true, text: 'GRRR... CHEGA DE BRINCADEIRA! AGORA VOCÊ ME DEIXOU FURIOSO!' },
+      { who: 'Genésio', text: 'Eu já esperava por isso. Respira fundo e vem de novo!' },
+    ],
+    victory: [
+      { who: 'Golem Demolidor', boss: true, text: 'Impossível... derrotado por um cubinho verde...' },
+      { who: 'Genésio', text: 'Nada pessoal. Agora o bosque pode respirar em paz.' },
+      { who: 'Golem Demolidor', boss: true, text: 'Hmpf... Você luta com honra. O bosque é seu. Cuide bem dele.' },
+      { who: 'Genésio', text: 'Pode deixar! Obrigado pela luta, Golem!' },
+    ],
+  };
+  function say(kind, done) {
+    const lines = TALK[kind];
+    if (!lines || typeof Talk === 'undefined' || g.noTalk) { if (done) done(); return; }
+    for (const k in keys) keys[k] = false;
+    g.talking = true; g.vx = 0; g.charge = null; g.atkQ = false; cancelAttackInput();
+    Talk.start(lines.map(l => l.boss ? { ...l, pic: GOLEM_PIC, side: 'right', dim: true } : { ...l, pic: GENESIO_PIC, side: 'left', dim: true }), () => { if (g) g.talking = false; if (done) done(); });
+  }
+
   // ---- boss ----
   function startIntro() {
     g.phase = 'intro'; g.phaseT = 0; g.camLock = true; g.wallL = CAM_ARENA + 40; g.wallR = CAM_ARENA + VIEW_W - 40; g.arenaReached = true;
@@ -332,7 +384,9 @@ const Solar = (() => {
     g.atkQ = false; g.mobs.length = 0;
     // A última imagem vira uma arena fechada até a vitória.
     burst(g.wallL, GY, 26, 'rock'); dust(g.wallL, GY, 10, 1.3);
-    g.boss = { x: CAM_ARENA + VIEW_W - 340, y: -520, face: -1, hp: BOSS_HP, st: 'fall', t: 0, fr: 15, flash: 0, vy: 0, acd: 1, last: '', p2: false, hitFx: 0, vx: 0, tx: 0, rec: 0, sq: 0, hurtV: 0, ghosts: [], walk: 0, slow: 0, prev: 0 };
+    g.heal = { t: 0, need: MAXHP - g.hp, filled: 0, done: false, dur: MAXHP - g.hp > 0 ? .55 + (MAXHP - g.hp) * .32 + .9 : .7 };   // o Genésio recupera toda a vida antes do golem cair
+    g.pulse = {};
+    g.boss = { x: CAM_ARENA + VIEW_W - 340, y: -520, face: -1, hp: BOSS_HP, st: 'pre', t: 0, fr: 15, flash: 0, vy: 0, acd: 1, last: '', p2: false, hitFx: 0, vx: 0, tx: 0, rec: 0, sq: 0, hurtV: 0, ghosts: [], walk: 0, slow: 0, prev: 0 };
     g.bossBar = 0; g.titleT = -1; g.introSkip = false;
   }
   const B = () => g.boss;
@@ -367,6 +421,9 @@ const Solar = (() => {
       b.ghosts.push({ x: b.x, y: b.y, fr: b.fr, face: b.face, t: g.t });
     const d = b.face, wl = g.wallL + 190, wr = g.wallR - 190;
     switch (b.st) {
+      case 'pre':                                                  // espera a cura do Genésio terminar
+        b.fr = 15; if (!g.heal) { b.st = 'fall'; b.t = 0; }
+        break;
       case 'fall':
         b.vy += 3400 * dt; b.y += b.vy * dt; b.fr = 15;
         if (Math.random() < dt * 60) g.parts.push({ k: 'dirt', x: b.x + rnd(-150, 150), y: b.y - 150, vx: rnd(-60, 60), vy: rnd(100, 380), life: 1.2, t: 0, s: rnd(5, 13), rot: rnd(0, 6), vr: rnd(-8, 8), c: Math.floor(rnd(0, 3)) });
@@ -381,7 +438,10 @@ const Solar = (() => {
       case 'roar':
         b.fr = 12; doShake(11 + 5 * Math.sin(b.t * 34));
         if (Math.random() < dt * 40) g.parts.push({ k: 'dirt', x: g.cam + rnd(0, VIEW_W), y: -10, vx: rnd(-30, 30), vy: rnd(200, 520), life: 1.6, t: 0, s: rnd(5, 12), rot: rnd(0, 6), vr: rnd(-8, 8), c: Math.floor(rnd(0, 3)) });
-        if (b.t > 2.3) { b.st = 'idle'; b.t = 0; g.phase = 'fight'; b.acd = 1.5; g.stumble = 0; }
+        if (b.t > 2.3) {
+          const go = () => { b.st = 'idle'; b.t = 0; g.phase = 'fight'; b.acd = 1.5; g.stumble = 0; };
+          if (!g.arenaRetry && !g.introTalked) { g.introTalked = true; say('intro', go); } else go();     // ao lutar de novo não repete a conversa
+        }
         break;
       case 'p2roar':
         b.fr = 12; doShake(10 + 4 * Math.sin(b.t * 34)); b.flash = 0.05;
@@ -441,6 +501,7 @@ const Solar = (() => {
           g.phase = 'victory'; g.phaseT = 0; g.atk = null; g.atkQ = false;
           Sound.power(); popup('BOSQUE LIBERADO!', g.x, g.y - 210, '#d9ffb0');
           stars(g.x, g.y - 100, 24);
+          say('victory');
         }
         break;
     }
@@ -458,7 +519,7 @@ const Solar = (() => {
     popup('-' + (+n.toFixed(1)), b.x + rnd(-40, 40), GY - 340, '#ffe58a');
     if (b.hp <= 0) { b.hp = 0; b.st = 'dead'; b.t = 0; b.y = GY; b.vy = 0; g.waves.length = 0; g.debris.length = 0; doShake(32); g.flash = .7; Sound.smash(); return true; }
     if (fromRain) return true;                       // durante a chuva o boss continua atordoado; a fúria vem no fim
-    if (!b.p2 && b.hp <= BOSS_HP / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; g.waves.length = 0; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); return true; }
+    if (!b.p2 && b.hp <= BOSS_HP / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; g.waves.length = 0; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); say('fury'); return true; }
     if (b.st === 'idle') { b.st = 'hit'; b.t = 0; }
     return true;
   }
@@ -475,8 +536,8 @@ const Solar = (() => {
     showOverlay('lose');
   }
 
-  // ---- especial do capacete: chuva de martelos no boss ----
-  const RAIN_DUR = 2.3, RAIN_HITS = 12, RAIN_DMG = 1.2;   // ~14 de 40 de vida do golem (35%)
+  // ---- especial (caixa de pregos): chuva de pregos no boss ----
+  const RAIN_DUR = 2.3, RAIN_HITS = 18, RAIN_DMG = 0.8;   // ~14 de 40 de vida do golem (35%)
   function canRain() {
     const b = g.boss;
     return g.special && !g.rain && !g.dead && g.phase === 'fight' && b && b.st !== 'dead' && b.st !== 'fall' && b.st !== 'land' && b.st !== 'roar' && b.st !== 'p2roar' && !g.hammer;
@@ -486,19 +547,20 @@ const Solar = (() => {
     g.special = false; g.atk = null; g.atkQ = false; cancelAttackInput(); g.dodge = null; g.charge = null;
     g.waves.length = 0; g.debris.length = 0;
     g.rain = { t: 0, hammers: [], fired: 0 };
-    for (let i = 0; i < RAIN_HITS; i++) g.rain.hammers.push({ delay: .35 + i * (RAIN_DUR - .7) / RAIN_HITS, dx: rnd(-130, 130) + (i % 2 ? 40 : -40), ty: GY - rnd(60, 330), y: -140, vy: 0, st: 'wait', rot: rnd(0, 6), vr: rnd(-14, 14) });
+    for (let i = 0; i < RAIN_HITS; i++) g.rain.hammers.push({ delay: .35 + i * (RAIN_DUR - .7) / RAIN_HITS, dx: rnd(-130, 130) + (i % 2 ? 40 : -40), ty: GY - rnd(60, 330), y: -140, vy: 0, st: 'wait', rot: rnd(-.12, .12), vr: 0, sT: 0 });
     b.st = 'rainStun'; b.t = 0; b.fr = 13; b.ghosts.length = 0; b.hitDone = false;
     g.invul = Math.max(g.invul, RAIN_DUR + .8); g.flash = .35; doShake(8);
     Sound.power(); Sound.roar();
-    popup('CHUVA DE MARTELOS!', g.x, g.y - 190, '#ffe28a');
+    popup('CHUVA DE PREGOS!', g.x, g.y - 190, '#dff0ff');
   }
   function rainUpdate(dt) {
     const r = g.rain, b = g.boss; if (!r) return;
     r.t += dt; g.invul = Math.max(g.invul, .3); g.hurtT = 0; g.vx = 0;
     for (const h of r.hammers) {
       if (h.st === 'wait' && r.t >= h.delay) { h.st = 'fall'; h.x = b.x + h.dx; Sound.swing(); }
+      else if (h.st === 'done') h.sT += dt;
       else if (h.st === 'fall') {
-        h.vy += 5200 * dt; h.y += h.vy * dt; h.rot += h.vr * dt;
+        h.vy += 5200 * dt; h.y += h.vy * dt;
         if (h.y >= h.ty) {
           h.st = 'done'; r.fired++;
           if (b.st !== 'dead') {
@@ -512,7 +574,7 @@ const Solar = (() => {
     if (b.st === 'dead') { g.rain = null; return; }
     if (r.t >= RAIN_DUR && r.hammers.every(h => h.st === 'done')) {
       g.rain = null; g.invul = Math.max(g.invul, .8);
-      if (!b.p2 && b.hp <= BOSS_HP / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); }
+      if (!b.p2 && b.hp <= BOSS_HP / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); say('fury'); }
       else { b.st = 'idle'; b.t = 0; b.acd = 1.2; }
     }
   }
@@ -696,6 +758,7 @@ const Solar = (() => {
   function update(dt) {
     if (!running || g.paused || g.ended) return;
     if (g.hitstop > 0) { g.hitstop -= dt; return; }
+    if (g.talking) { g.animT += dt; return; }                // conversa aberta: o mundo espera
     g.t += dt; g.phaseT += dt; g.animT += dt;
     if (g.shake > 0) g.shake = Math.max(0, g.shake - dt * (g.phase === 'intro' ? 14 : 55));
     if (g.flash > 0) g.flash = Math.max(0, g.flash - dt * 1.4);
@@ -710,6 +773,7 @@ const Solar = (() => {
       else if (p.k === 'piece') p.vy += p.g * dt;
     }
     g.parts = g.parts.filter(p => p.t < p.life);
+    if (g.heal) healUpdate(dt);
     if (g.parts.length > 400) g.parts.splice(0, g.parts.length - 400);
 
     if (g.phase === 'ready') {
@@ -751,10 +815,10 @@ const Solar = (() => {
     }
     g.debris = g.debris.filter(d => d.st !== 'done');
     mobsUpdate(dt);
-    // capacete
+    // caixa de pregos (o especial)
     for (const h of g.helmets) {
       if (h.got || g.special || g.dead) continue;
-      if (Math.hypot(g.x - h.x, (g.y - 55) - h.y) < 58) { h.got = true; g.special = true; g.hitstop = .06; Sound.power(); popup('CAPACETE!  Aperte F no boss', h.x, h.y - 50, '#ffe28a'); stars(h.x, h.y, 12); g.flash = .15; }
+      if (Math.hypot(g.x - h.x, (g.y - 55) - h.y) < 58) { h.got = true; g.special = true; g.hitstop = .06; Sound.power(); popup('PREGOS!  Aperte F no boss', h.x, h.y - 50, '#ffe28a'); stars(h.x, h.y, 12); g.flash = .15; }
     }
     // corações
     for (const h of g.hearts) {
@@ -842,18 +906,18 @@ const Solar = (() => {
       ctx.fillStyle = gl; ctx.fillRect(x - 40, y - 40, 80, 80);
       ctx.drawImage(imgs.heart, x - 20, y - 19, 40, 40 * imgs.heart.height / imgs.heart.width);
     }
-    // capacetes no chão
+    // caixas de pregos no chão
     for (const h of g.helmets) {
       if (h.got) continue;
       const x = sx(h.x), y = sy(h.y + Math.sin(g.t * 4 + h.x) * 7);
       const gl = ctx.createRadialGradient(x, y, 4, x, y, 52); gl.addColorStop(0, 'rgba(255,230,90,.7)'); gl.addColorStop(1, 'rgba(255,230,90,0)');
       ctx.fillStyle = gl; ctx.fillRect(x - 54, y - 54, 108, 108);
-      const w = 54 * S / .72 * .72, hh = w * imgs.helmet.height / imgs.helmet.width; ctx.drawImage(imgs.helmet, x - w / 2, y - hh / 2, w, hh);
+      const w = 70 * S, hh = w * imgs.nailBox.height / imgs.nailBox.width; ctx.drawImage(imgs.nailBox, x - w / 2, y - hh / 2, w, hh);     // caixa de pregos (o especial)
       ctx.fillStyle = '#fffbe0'; for (let i = 0; i < 3; i++) { const an = g.t * 3 + i * 2.1; ctx.fillRect(x + Math.cos(an) * 34 - 2, y + Math.sin(an) * 28 - 2, 4, 4); }
     }
     // sombras
     const shadow = (wx, wy, rx) => { ctx.fillStyle = 'rgba(0,30,10,.3)'; ctx.beginPath(); ctx.ellipse(sx(wx), sy(wy) - 2, rx * S, rx * S * 0.2, 0, 0, 6.3); ctx.fill(); };
-    if (g.boss && g.boss.st !== 'fall') shadow(g.boss.x, GY, 150 * (g.boss.st === 'stompJ' ? 0.6 : 1));
+    if (g.boss && g.boss.st !== 'fall' && g.boss.st !== 'pre') shadow(g.boss.x, GY, 150 * (g.boss.st === 'stompJ' ? 0.6 : 1));
     shadow(g.x, g.plat ? g.y : (() => { let by = GY; for (const p of PLATS) if (inRange(p, g.x) && p.y >= g.y - 2 && p.y < by) by = p.y; return by; })(), 40);
 
     // mobs (peças articuladas: asas, garras, braços e pernas se mexem de verdade)
@@ -1036,17 +1100,33 @@ const Solar = (() => {
       const pb = pBox(); ctx.strokeStyle = 'cyan'; ctx.strokeRect(sx(pb.x0), sy(pb.y0), (pb.x1 - pb.x0) * S, (pb.y1 - pb.y0) * S);
       if (g.boss) { const hb = bossHurtbox(); ctx.strokeStyle = 'yellow'; ctx.strokeRect(sx(hb.x0), sy(hb.y0), (hb.x1 - hb.x0) * S, (hb.y1 - hb.y0) * S); }
     }
-    // chuva de martelos
+    // aura de cura do Genésio
+    if (g.heal) {
+      const h = g.heal, a = Math.min(1, h.t / .3) * Math.min(1, Math.max(0, (h.dur + .05 - h.t) / .45));
+      const px = sx(g.x), py = sy(g.y - 62), pu = .8 + .2 * Math.sin(g.t * 12);
+      const hg = ctx.createRadialGradient(px, py, 12 * S, px, py, 120 * S); hg.addColorStop(0, `rgba(190,255,215,${.5 * a * pu})`); hg.addColorStop(.6, `rgba(120,255,170,${.28 * a})`); hg.addColorStop(1, 'rgba(120,255,170,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(px, py, 120 * S, 0, 6.3); ctx.fill();
+      for (let i = 0; i < 2; i++) { const q = ((h.t * 1.6 + i * .5) % 1); ctx.strokeStyle = `rgba(190,255,215,${.6 * a * (1 - q)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(px, sy(g.y - 6), (20 + q * 90) * S, (6 + q * 22) * S, 0, 0, 6.3); ctx.stroke(); }
+      ctx.fillStyle = `rgba(150,255,190,${.07 * a})`; ctx.fillRect(0, 0, VW, VH);
+    }
+    // chuva de pregos
     if (g.rain) {
       const r = g.rain, b = g.boss, fade = Math.min(1, r.t / .25) * Math.min(1, Math.max(0, (RAIN_DUR + .3 - r.t) / .3));
-      ctx.fillStyle = `rgba(20,10,0,${.22 * fade})`; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = `rgba(6,12,28,${.26 * fade})`; ctx.fillRect(0, 0, VW, VH);
       const gl = ctx.createRadialGradient(sx(b.x), sy(GY - 170), 20, sx(b.x), sy(GY - 170), 360 * S);
-      gl.addColorStop(0, `rgba(255,220,120,${.35 * fade})`); gl.addColorStop(1, 'rgba(255,220,120,0)'); ctx.fillStyle = gl; ctx.fillRect(0, 0, VW, VH);
-      for (const h of r.hammers) if (h.st === 'fall') {
-        const x = sx(h.x), y = sy(h.y), k = S * 1.15;
-        ctx.save(); ctx.globalAlpha = .35; ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x, y - 120 * S); ctx.lineTo(x, y - 18); ctx.stroke(); ctx.restore();
-        ctx.save(); ctx.translate(x, y); ctx.rotate(h.rot); ctx.shadowColor = '#ffe28a'; ctx.shadowBlur = 16;
-        ctx.drawImage(imgs.hammer, -34 * k, -40 * k, 68 * k, 80 * k); ctx.restore();
+      gl.addColorStop(0, `rgba(190,220,255,${.32 * fade})`); gl.addColorStop(1, 'rgba(190,220,255,0)'); ctx.fillStyle = gl; ctx.fillRect(0, 0, VW, VH);
+      const nw = 38 * S * 1.25, nh = nw * imgs.nail.height / imgs.nail.width;
+      for (const h of r.hammers) {
+        const x = sx(h.x), y = sy(h.y);
+        if (h.st === 'fall') {
+          ctx.save(); ctx.globalAlpha = .4; ctx.strokeStyle = '#dff0ff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y - nh - 90 * S); ctx.lineTo(x, y - nh); ctx.stroke(); ctx.restore();
+          ctx.save(); ctx.translate(x, y); ctx.rotate(h.rot); ctx.shadowColor = '#cfe6ff'; ctx.shadowBlur = 14;
+          ctx.drawImage(imgs.nail, -nw / 2, -nh, nw, nh); ctx.restore();
+        } else if (h.st === 'done' && h.sT < .55) {                 // fica cravado no golem e some
+          ctx.save(); ctx.globalAlpha = Math.max(0, 1 - h.sT / .55); ctx.translate(x, y); ctx.rotate(h.rot);
+          const sw = imgs.nail.width, sh = imgs.nail.height * .55;       // só a parte de cima aparece: a ponta entrou
+          ctx.drawImage(imgs.nail, 0, 0, sw, sh, -nw / 2, -nh * .62, nw, nh * .55); ctx.restore();
+        }
       }
       // escudo dourado em volta do Genésio: ele está imune
       const px = sx(g.x), py = sy(g.y - 62), pu = .75 + .25 * Math.sin(g.t * 14);
@@ -1062,6 +1142,8 @@ const Solar = (() => {
       else if (p.k === 'dust') { ctx.fillStyle = '#e8d8b0'; ctx.beginPath(); ctx.arc(0, 0, p.s * S, 0, 6.3); ctx.fill(); }
       else if (p.k === 'dirt') { ctx.rotate(p.rot); ctx.fillStyle = ['#6b4a2b', '#8a5e34', '#4d3320'][p.c]; ctx.fillRect(-p.s * S / 2, -p.s * S / 2, p.s * S, p.s * S * 0.8); }
       else if (p.k === 'rock') { ctx.rotate(p.rot); ctx.fillStyle = ['#8a8a92', '#6c6c74', '#a4a4ac'][p.c]; ctx.strokeStyle = '#2a2a30'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283, r = p.s * S * (i % 2 ? .6 : 1); ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      else if (p.k === 'heal') { const q = p.s * 6 * S; ctx.fillStyle = '#b8ffcf'; ctx.strokeStyle = '#1d6b3c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.rect(-q * .3, -q, q * .6, q * 2); ctx.rect(-q, -q * .3, q * 2, q * .6); ctx.fill(); ctx.stroke(); }
+      else if (p.k === 'healHeart') { const q = 26 * p.s * S; ctx.drawImage(imgs.heart, -q / 2, -q / 2, q, q * imgs.heart.height / imgs.heart.width); }
       else if (p.k === 'star') { ctx.rotate(p.rot); ctx.fillStyle = '#ffe66b'; ctx.strokeStyle = '#8a5a0c'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let i = 0; i < 8; i++) { const an = i / 8 * 6.283, r = p.s * S * (i % 2 ? .4 : 1); ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); }
       ctx.restore();
     }
@@ -1083,7 +1165,12 @@ const Solar = (() => {
 
   function outline(ctx, t, x, y, fill, w) { ctx.lineWidth = w || 6; ctx.strokeStyle = '#08150f'; ctx.fillStyle = fill || '#fff'; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }
   function drawHud(ctx) {
-    for (let i = 0; i < MAXHP; i++) { const im = i < g.hp ? imgs.heart : imgs.heartEmpty; ctx.drawImage(im, 84 + i * 38, 20, 34, 34 * im.height / im.width); }
+    for (let i = 0; i < MAXHP; i++) {
+      const im = i < g.hp ? imgs.heart : imgs.heartEmpty, pt = g.pulse && g.pulse[i] !== undefined ? Math.max(0, 1 - (g.t - g.pulse[i]) / .4) : 0, k = 1 + .55 * pt, w = 34 * k, h = 34 * im.height / im.width * k;
+      if (pt > 0) { ctx.save(); ctx.shadowColor = '#b8ffcf'; ctx.shadowBlur = 16 * pt; }
+      ctx.drawImage(im, 84 + i * 38 + 17 - w / 2, 20 + 17 * im.height / im.width - h / 2, w, h);
+      if (pt > 0) ctx.restore();
+    }
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = "700 15px 'Fredoka',sans-serif";
     outline(ctx, g.dodge || g.dodgeGrace > 0 ? 'IMUNE' : g.dodgeCd > 0 ? `Esquiva: ${g.dodgeCd.toFixed(1)}s` : (isTouch() ? 'Esquiva pronta' : 'Shift · esquiva pronta'), 84, 72, g.dodge || g.dodgeGrace > 0 ? '#9ff3ff' : '#fff', 4);
     outline(ctx, g.hammer ? 'Martelo voltando' : (isTouch() ? 'Lançar: toque · arraste para mirar' : 'C · lançar   Segure C + mouse · mirar'), 84, 94, '#fff3b0', 4);
@@ -1091,9 +1178,9 @@ const Solar = (() => {
       const ready = g.special, live = canRain(), pulse = live ? .7 + .3 * Math.sin(g.t * 7) : 1;
       ctx.save(); ctx.globalAlpha = ready ? 1 : .32;
       if (!ready) ctx.filter = 'grayscale(1)';
-      ctx.drawImage(imgs.helmet, 84, 104, 38, 38 * imgs.helmet.height / imgs.helmet.width); ctx.filter = 'none'; ctx.restore();
+      ctx.drawImage(imgs.nailBox, 84, 102, 40, 40 * imgs.nailBox.height / imgs.nailBox.width); ctx.filter = 'none'; ctx.restore();
       ctx.textAlign = 'left'; ctx.font = "700 15px 'Fredoka',sans-serif";
-      outline(ctx, ready ? (live ? (isTouch() ? 'CHUVA DE MARTELOS!' : 'F · CHUVA DE MARTELOS!') : (isTouch() ? 'Chuva de martelos (no boss)' : 'F · chuva de martelos (no boss)')) : 'Pegue um capacete', 130, 124, ready ? (live ? `rgba(255,226,120,${pulse})` : '#fff3b0') : '#ccc', 4);
+      outline(ctx, ready ? (live ? (isTouch() ? 'CHUVA DE PREGOS!' : 'F · CHUVA DE PREGOS!') : (isTouch() ? 'Chuva de pregos (no boss)' : 'F · chuva de pregos (no boss)')) : 'Pegue a caixa de pregos', 130, 124, ready ? (live ? `rgba(255,226,120,${pulse})` : '#fff3b0') : '#ccc', 4);
     }
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     const fr = imgs.fly[Math.floor(g.animT * 12) % 8], k0 = 0.24;
@@ -1117,7 +1204,7 @@ const Solar = (() => {
       ctx.restore();
     }
     // título da luta
-    if (g.titleT >= 0 && g.titleT < 3.2) {
+    if (g.titleT >= 0 && g.titleT < 3.2 && !g.talking) {
       const t = g.titleT, a = t < 0.3 ? t / 0.3 : t > 2.6 ? Math.max(0, (3.2 - t) / 0.6) : 1, sc = reducedMotion.matches ? 1 : 1 + Math.max(0, 0.3 - t) * 2;
       ctx.save(); ctx.globalAlpha = a; ctx.translate(VW / 2, 250); ctx.scale(sc, sc); ctx.textAlign = 'center';
       ctx.font = "700 92px 'Fredoka',sans-serif"; outline(ctx, 'GOLEM DEMOLIDOR', 0, 0, '#ffcf3a', 14);
@@ -1134,7 +1221,7 @@ const Solar = (() => {
       const t = g.phaseT, a = t < 0.4 ? t / 0.4 : t > 2.4 ? Math.max(0, (3 - t) / 0.6) : 1;
       ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.font = "700 76px 'Fredoka',sans-serif"; outline(ctx, 'SOLAR DO BOSQUE', VW / 2, 170, '#d9ffb0', 12);
       ctx.font = "700 24px 'Fredoka',sans-serif"; outline(ctx, isTouch() ? 'Joystick mover · botões: pular, bater, esquivar' : 'A / D mover · Shift esquivar · Espaço pular', VW / 2, 224, '#fff', 5);
-      ctx.font = "700 22px 'Fredoka',sans-serif"; outline(ctx, isTouch() ? 'Pegue o capacete e use o botão Chuva no boss' : 'J / clique: bater · C: lançar o martelo · pegue o capacete: F no boss', VW / 2, 259, '#fff3b0', 5); ctx.restore();
+      ctx.font = "700 22px 'Fredoka',sans-serif"; outline(ctx, isTouch() ? 'Pegue a caixa de pregos e use o botão Pregos no boss' : 'J / clique: bater · C: lançar o martelo · pegue a caixa de pregos: F no boss', VW / 2, 259, '#fff3b0', 5); ctx.restore();
     }
   }
 

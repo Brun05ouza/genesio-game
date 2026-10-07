@@ -4,8 +4,8 @@ const Flow = (() => {
   const VW = 1280, VH = 720, S = VH / 941, MW = 1672, MH = 941, VIEW_W = VW / S;
   const GRAV = 2350, FLAP = 745, MAXFALL = 980;
   const BX = 430;                                        // posição horizontal da nave na tela (em unidades do mapa)
-  const SHIP_W = 150, SEG_GAP = 300;
-  const HIT = { w: 92, h: 52, dy: 6 };                   // caixa de colisão (menor que o desenho, para ser justo)
+  const SHIP_W = 118, SEG_GAP = 300;                    // nave ~20% menor
+  const HIT = { w: 72, h: 41, dy: 5 };                   // caixa de colisão (menor que o desenho, para ser justo)
   const PTS_PER_COIN = 5;
   const DIR = 'fase-flow/out/';
   const el = id => document.getElementById(id);
@@ -89,10 +89,30 @@ const Flow = (() => {
 
   // ---- telas ----
   function hideOverlay() { el('fOverlay').classList.remove('active'); }
+  // atalhos do menu: Espaço = principal (voar de novo / continuar), Esc = sair (na tela "Você bateu"), ↑/↓ escolhem o botão e Enter confirma
+  let sel = 0, overlayAt = 0;
+  const btns = () => [el('fPrimary'), el('fExit')];
+  function select(i) { sel = i; btns().forEach((b, k) => b.classList.toggle('sel', k === i)); }
+  const overlayOpen = () => running && g && (g.paused || g.ended) && el('fOverlay').classList.contains('active');
+  addEventListener('keydown', e => {
+    if (!overlayOpen()) return;
+    const k = e.code, over = g.ended, ready = performance.now() - overlayAt > 450;       // evita reiniciar sem querer enquanto ainda aperta Espaço para voar
+    if (k === 'Escape') { if (over) { e.stopImmediatePropagation(); e.preventDefault(); if (ready) el('fExit').click(); } return; }   // na pausa o Esc segue para o jogo (continuar)
+    if (!['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(k)) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (e.repeat) return;
+    if (k === 'ArrowUp' || k === 'KeyW') select(0);
+    else if (k === 'ArrowDown' || k === 'KeyS') select(1);
+    else if (ready) { for (const key in keys) keys[key] = false; (k === 'Space' ? el('fPrimary') : btns()[sel]).click(); }
+  });
   function showOverlay(kind) {
     el('fTitle').textContent = kind === 'pause' ? 'Pausado' : 'Você bateu!';
-    el('fPrimary').textContent = kind === 'pause' ? 'Continuar' : 'Voar de novo';
+    el('fPrimaryTxt').textContent = kind === 'pause' ? 'Continuar' : 'Voar de novo';
+    el('fPrimaryKey').textContent = kind === 'pause' ? 'Espaço' : 'Espaço';
+    el('fExitKey').textContent = 'Esc';
+    el('fExitKey').hidden = kind === 'pause';              // na pausa o Esc continua o jogo
     el('fPrimary').dataset.kind = kind;
+    select(0); overlayAt = performance.now();
     el('fInfo').innerHTML = kind === 'pause'
       ? `Pilares: <b>${g.score}</b> · Recorde: <b>${Math.max(getBest(), g.score)}</b>`
       : `Pilares ultrapassados: <b>${g.score}</b> · Recorde: <b>${getBest()}</b>${g.newRecord ? ' 🏆 novo!' : ''}<br>🪙 <b>+${g.coinsEarned} GenesisCoins</b> <small>(1 a cada ${PTS_PER_COIN} pilares)</small>`;
@@ -117,7 +137,7 @@ const Flow = (() => {
   function flap() {
     if (g.dead || g.paused || g.ended) return;
     if (g.phase === 'ready') { g.phase = 'play'; g.hint = 0; }
-    g.vy = -FLAP; g.flapT = 0; Sound.flap(); burst(g.x - 20, g.y + 55, 7);
+    g.vy = -FLAP; g.flapT = 0; Sound.flap(); burst(g.x - 16, g.y + 44, 7);
   }
   // fagulhas do propulsor
   function burst(x, y, n) { for (let i = 0; i < n; i++) g.parts.push({ x, y, vx: rnd(-160, 40) - g.speed * .3, vy: rnd(120, 420), life: rnd(.25, .6), t: 0, s: rnd(2, 4.5), c: Math.random() < .5 ? 0 : 1 }); }
@@ -145,7 +165,7 @@ const Flow = (() => {
     }
     if (g.phase === 'ready') {                                  // paira esperando o primeiro toque
       g.y = MH / 2 + Math.sin(g.t * 3) * 14; g.rot = Math.sin(g.t * 3) * .04; g.hint += dt;
-      if (Math.random() < dt * 30) burst(g.x - 20, g.y + 55, 1);
+      if (Math.random() < dt * 30) burst(g.x - 16, g.y + 44, 1);
       return;
     }
     g.speed = speedFor(g.score);
@@ -153,7 +173,7 @@ const Flow = (() => {
     g.vy = Math.min(MAXFALL, g.vy + GRAV * dt); g.y += g.vy * dt;
     if (g.y < 50) { g.y = 50; g.vy = Math.max(g.vy, 0); }       // teto: só encosta
     g.rot += ((Math.max(-.38, Math.min(.5, g.vy / 1500))) - g.rot) * Math.min(1, dt * 12);
-    if (Math.random() < dt * 55) burst(g.x - 22, g.y + 52, 1);
+    if (Math.random() < dt * 55) burst(g.x - 18, g.y + 42, 1);
     ensureWorld(g.cam + VIEW_W * 3);
 
     // colisão e pontuação
@@ -245,7 +265,7 @@ const Flow = (() => {
       const k = SHIP_W / imgs.ufo.width * S, w = imgs.ufo.width * k, h = imgs.ufo.height * k;
       const px = g.x * S, py = g.y * S, rot = g.dead ? g.spin : g.rot;
       const boost = Math.max(0, 1 - g.flapT / .22), falling = g.vy > 250 ? .0 : 1;
-      if (!g.dead) drawFlame(ctx, px + Math.sin(rot) * -h * .24, py + Math.cos(rot) * h * .22, S * 2.0, boost, g.t, rot);
+      if (!g.dead) drawFlame(ctx, px + Math.sin(rot) * -h * .24, py + Math.cos(rot) * h * .22, S * 1.6, boost, g.t, rot);
       ctx.save(); ctx.translate(px, py); ctx.rotate(rot);
       const sq = 1 + boost * .05; ctx.scale(1 / sq, sq);
       ctx.drawImage(imgs.ufo, -w / 2, -h * .62, w, h); ctx.restore();

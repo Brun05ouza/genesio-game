@@ -11,3 +11,20 @@ Thumbs.db
 touch-*.png
 pwa-offline.png
 ios-*.png
+assets/Teal Lobby*.png
+talk-*.png
+map/lobby-mask-preview.png
+flow-menu.png
+flow-ship.png
+fase-teresopolis/map-teresopolis-preview.png
+nat-debug.png
+_*.cjs
+fase-teresopolis/teresopolis-colisao-preview.png
+fase-solar-do-bosque/sprites/nail-preview.png
+solar-heal.png
+solar-talk-*.png
+solar-nails.png
+solar-rain-preview.png
+tests/out/
+tools/out/
+fase-teresopolis/Cozy Pixel-Art Residential Garden District.png

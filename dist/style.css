@@ -4,7 +4,7 @@ canvas{display:block;position:absolute;left:50%;top:50%;transform:translate(-50%
 #ui{position:absolute;inset:0;pointer-events:none}
 .screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;pointer-events:auto}
 .screen.active{display:flex}
-#loading,#settings{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%)}
+#settings{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%)}
 #menu{background:linear-gradient(rgba(6,20,13,.55),rgba(6,20,13,.75));backdrop-filter:blur(2px)}
 .logo{margin:0;font-size:clamp(56px,11vw,132px);font-weight:700;letter-spacing:.06em;color:var(--g1);
   text-shadow:0 5px 0 var(--g2),0 10px 0 var(--g3),0 16px 24px rgba(0,0,0,.6);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill}
@@ -122,10 +122,10 @@ p.small{font-size:15px;opacity:.85;margin:0}
 #fOverlay{background:rgba(10,6,24,.66);z-index:4}
 
 /* ===== Telas grandes (desktop): a interface cresce com o monitor (--k vem do game.js) ===== */
-.screen:not(#menu):not(#settings):not(#serra):not(#desert):not(#rotate) > :not(.logo):not(.mstage):not(.sstage),
+.screen:not(#menu):not(#settings):not(#serra):not(#loading):not(#desert):not(#rotate) > :not(.logo):not(.mstage):not(.sstage),
 #menu .corner,#menu .hint,.desert-box,#toast{zoom:var(--k,1)}
 #toast{top:calc(28px * var(--k,1))}
-.touch .screen:not(#menu):not(#settings):not(#serra):not(#desert) > :not(.logo){zoom:1}   /* celular: nada de zoom, só o ajuste compacto */
+.touch .screen:not(#menu):not(#settings):not(#serra):not(#loading):not(#desert) > :not(.logo){zoom:1}   /* celular: nada de zoom, só o ajuste compacto */
 .touch #menu .corner,.touch #menu .hint,.touch .desert-box,.touch #toast{zoom:1}
 
 /* carregamento de fase */
@@ -159,3 +159,92 @@ body.app #installBar,body.app #btnInstall{display:none}
 #iosArrow[hidden]{display:none}
 @keyframes bob{50%{translate:0 8px}}
 @media (orientation:landscape){#iosArrow{display:none}}
+
+/* carregamento do lobby: arte pronta (sem a barra/texto desenhados) + barra de progresso real por cima */
+#loading{background:#0b2418;z-index:5}
+.lobby-stage{position:relative;width:min(100vw,calc(100vh * 1672 / 941));aspect-ratio:1672/941;container-type:inline-size}
+.lobby-stage img{position:absolute;inset:0;width:100%;height:100%;display:block;-webkit-user-drag:none}
+.lobby-bar{position:absolute;left:35.4%;top:70.3%;width:29.3%;height:3.3%;border-radius:5cqw;overflow:hidden}
+#barFill{height:100%;width:0;border-radius:5cqw;background:repeating-linear-gradient(120deg,#13c8bb 0 1.5cqw,#52e4d6 1.5cqw 3cqw);box-shadow:inset 0 .25cqw 0 rgba(255,255,255,.3);transition:width .1s}
+#loadText{position:absolute;left:0;right:0;top:75.3%;margin:0;text-align:center;font-size:2cqw;font-weight:700;color:#fff;-webkit-text-stroke:.5cqw #10242a;paint-order:stroke fill;text-shadow:0 .2cqw 0 #10242a}
+
+/* ===== conversa estilo Pokémon FireRed ===== */
+#talk{position:absolute;inset:0;z-index:4;background:linear-gradient(rgba(6,20,13,.05) 30%,rgba(6,20,13,.55));pointer-events:auto;touch-action:manipulation;cursor:pointer;animation:talkIn .25s ease-out}
+#talk[hidden]{display:none}
+#talk.leaving{opacity:0;transition:opacity .2s;pointer-events:none}
+@keyframes talkIn{from{opacity:0}}
+#talkPic{position:absolute;left:max(4vw,env(safe-area-inset-left));bottom:calc(var(--tb,0px) + 14px);height:clamp(110px,40vh,360px);width:auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5));pointer-events:none;transform-origin:50% 100%;animation:talkEnter .45s cubic-bezier(.2,1.4,.4,1) both}
+#talk.typing #talkPic{animation:talkEnter .45s cubic-bezier(.2,1.4,.4,1) both,talkYap .28s ease-in-out infinite .45s}
+#talkPic.hop{animation:talkHop .35s ease-out both}
+#talk.typing #talkPic.hop{animation:talkHop .35s ease-out both,talkYap .28s ease-in-out infinite .35s}
+@keyframes talkEnter{from{transform:translateX(-60%) scale(.7);opacity:0}}
+@keyframes talkHop{0%{transform:translateY(0)}40%{transform:translateY(-3.2vh) scaleY(1.05)}100%{transform:none}}
+@keyframes talkYap{50%{transform:translateY(-1.2vh) rotate(-2deg)}}
+.talk-box{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,860px);min-height:clamp(84px,19vh,150px);box-sizing:border-box;
+  padding:clamp(12px,2.6vh,22px) clamp(16px,3vw,32px) clamp(14px,3vh,26px);background:#fffdf0;color:#1b2a22;border:6px solid #1f4d38;border-radius:18px;
+  box-shadow:inset 0 0 0 3px #7cc7a0,0 8px 0 rgba(0,0,0,.35),0 14px 30px rgba(0,0,0,.4);display:flex;align-items:center}
+.talk-who{position:absolute;left:22px;top:0;transform:translateY(-62%);padding:3px 18px;background:#2f8f63;color:#fff;border:4px solid #1f4d38;border-radius:12px;font:700 clamp(14px,2.6vh,20px) 'Fredoka',sans-serif;letter-spacing:.04em;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+#talkText{margin:0;width:100%;font:600 clamp(16px,3.6vh,28px)/1.35 'Fredoka',sans-serif;white-space:pre-wrap;min-height:2.7em}
+#talkMore{position:absolute;right:20px;bottom:10px;font-size:clamp(16px,3.2vh,26px);color:#2f8f63;animation:talkBlink .7s steps(2) infinite}
+#talkMore[hidden]{display:none}
+@keyframes talkBlink{50%{transform:translateY(5px)}}
+#talkSkip{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));z-index:1;cursor:pointer}
+body.touch #talkSkip{top:max(12px,env(safe-area-inset-top))}
+@media (prefers-reduced-motion:reduce){#talkPic,#talkMore{animation:none!important}}
+@media (max-height:480px){.talk-box{width:min(78vw,860px);left:auto;right:max(2vw,env(safe-area-inset-right));transform:none;min-height:80px}#talkText{min-height:2.6em}}
+
+/* atalhos de teclado nos botões do Flow */
+#fOverlay .btn{position:relative;display:flex;align-items:center;justify-content:center;gap:12px}
+#fOverlay .btn kbd{font:700 14px 'Fredoka',sans-serif;padding:2px 9px;border-radius:7px;background:rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.35);color:#fff;letter-spacing:.02em}
+#fOverlay .btn.primary kbd{background:rgba(0,0,0,.14);border-color:rgba(0,0,0,.35);color:#2a1d05}
+#fOverlay .btn kbd[hidden]{display:none}
+#fOverlay .btn.sel{outline:4px solid #fff;outline-offset:3px}
+#fOverlay .kbd-help{margin:0}
+.touch #fOverlay kbd,.touch #fOverlay .kbd-help{display:none}
+
+/* conversa com o boss: retrato do Golem à direita, caixa em tom de pedra/ouro */
+#talk.right #talkPic{left:auto;right:max(4vw,env(safe-area-inset-right));transform-origin:50% 100%;animation:talkEnterR .45s cubic-bezier(.2,1.4,.4,1) both}
+#talk.right.typing #talkPic{animation:talkEnterR .45s cubic-bezier(.2,1.4,.4,1) both,talkYap .28s ease-in-out infinite .45s}
+#talk.right #talkPic.hop{animation:talkHop .35s ease-out both}
+#talk.boss #talkPic{height:clamp(120px,44vh,400px);max-width:46vw;object-fit:contain}
+#talk.boss .talk-box{background:#fff8e6;border-color:#4a3a14;box-shadow:inset 0 0 0 3px #e0a92c,0 8px 0 rgba(0,0,0,.35),0 14px 30px rgba(0,0,0,.4)}
+#talk.boss .talk-who{background:#c58a12;border-color:#4a3a14;left:auto;right:22px}
+#talk.boss #talkMore{color:#c58a12}
+@keyframes talkEnterR{from{transform:translateX(60%) scale(.7);opacity:0}}
+@media (max-height:480px){#talk.right .talk-box{right:auto;left:max(2vw,env(safe-area-inset-left))}}
+#talkPic{bottom:calc(clamp(84px,19vh,150px) + 38px)}
+#talk.boss #talkPic{height:clamp(110px,38vh,360px)}
+#talkPic{height:clamp(100px,34vh,320px)}
+@media (max-height:480px){#talkPic,#talk.boss #talkPic{bottom:calc(84px + 26px);height:clamp(90px,36vh,200px)}}
+
+/* ===== conversa: retrato AO LADO da caixa, com a base alinhada (o par fica centralizado na tela) ===== */
+#talk{--pw:clamp(130px,22vw,300px);--m:max(2.2vw,env(safe-area-inset-left));--mb:max(14px,env(safe-area-inset-bottom))}
+#talk.dim{background:linear-gradient(rgba(6,14,10,.45),rgba(6,14,10,.72))}
+#talk #talkPic{left:var(--m);right:auto;bottom:var(--mb);width:var(--pw);height:auto;max-width:none;max-height:56vh;object-fit:contain;object-position:50% 100%}
+#talk.right #talkPic{left:auto;right:var(--m)}
+#talk.boss #talkPic{height:auto;max-width:none}
+#talk .talk-box{left:calc(var(--m) + var(--pw) + 16px);right:var(--m);width:auto;max-width:900px;transform:none;bottom:var(--mb);margin:0 auto}
+#talk.right .talk-box{left:var(--m);right:calc(var(--m) + var(--pw) + 16px)}
+#talk .talk-who{left:22px}
+#talk.boss .talk-who{left:auto;right:22px}
+@media (max-height:480px){
+  #talk{--pw:clamp(90px,19vw,190px)}
+  #talk .talk-box{width:auto;min-height:78px}
+  #talk.right .talk-box{left:var(--m);right:calc(var(--m) + var(--pw) + 16px)}
+  #talk #talkPic{max-height:62vh}
+}
+#talk.boss{--pw:clamp(170px,30vw,400px)}
+@media (max-height:480px){#talk.boss{--pw:clamp(120px,27vw,260px)}}
+
+/* ===== conversa: retrato e caixa formam um par centralizado e colado (a caixa não se estica pela tela toda) ===== */
+#talk{--gap:14px;--bw:min(720px,calc(100vw - 2 * var(--m) - var(--pw) - var(--gap)));--gl:calc((100vw - var(--pw) - var(--gap) - var(--bw)) / 2)}
+#talk #talkPic{left:var(--gl);right:auto}
+#talk .talk-box{left:calc(var(--gl) + var(--pw) + var(--gap));right:auto;width:var(--bw);max-width:none;margin:0}
+#talk.right #talkPic{left:calc(var(--gl) + var(--bw) + var(--gap));right:auto}
+#talk.right .talk-box{left:var(--gl);right:auto;width:var(--bw)}
+@media (max-height:480px){
+  #talk{--gap:10px;--bw:min(640px,calc(100vw - 2 * var(--m) - var(--pw) - var(--gap)))}
+  #talk .talk-box,#talk.right .talk-box{width:var(--bw)}
+  #talk .talk-box{left:calc(var(--gl) + var(--pw) + var(--gap));right:auto}
+  #talk.right .talk-box{left:var(--gl);right:auto}
+}

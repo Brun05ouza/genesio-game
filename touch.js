@@ -20,19 +20,34 @@
   addEventListener('keydown', e => { if (!e.repeat && !['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) setTouch(false); }, true);
   addEventListener('contextmenu', e => { if (body.classList.contains('touch')) e.preventDefault(); });
 
+  // ---- inverter botões (Configurações): joystick à direita e botões à esquerda; fica salvo no aparelho ----
+  const swapBtn = document.getElementById('btnSwap');
+  const getSwap = () => { try { return localStorage.getItem('genesio-swap-controls') === '1'; } catch (e) { return false; } };
+  function applySwap(on) {
+    body.classList.toggle('swap', on);
+    if (swapBtn) { swapBtn.textContent = on ? 'Sim' : 'Não'; swapBtn.setAttribute('aria-pressed', on); }
+  }
+  applySwap(getSwap());
+  if (swapBtn) swapBtn.addEventListener('click', () => {
+    const on = !body.classList.contains('swap');
+    try { localStorage.setItem('genesio-swap-controls', on ? '1' : '0'); } catch (e) {}
+    applySwap(on);
+    if (typeof Sound !== 'undefined') { Sound.init(); Sound.click(); }
+  });
+
   // ---- teclas virtuais (soltar com atraso mínimo para o jogo não perder toques muito rápidos) ----
   // Soltar só depois de 70 ms E de 2 quadros do jogo: assim um toque rápido nunca se perde, mesmo se o aparelho engasgar num quadro.
   let frame = 0;
-  const since = {}, sinceF = {}, pending = new Set();
-  function press(code) { pending.delete(code); if (!keys[code]) { since[code] = performance.now(); sinceF[code] = frame; } keys[code] = true; }
+  const since = {}, sinceF = {}, pending = new Set(), virt = new Set();      // virt: teclas que foram os controles de toque que apertaram
+  function press(code) { pending.delete(code); virt.add(code); if (!keys[code]) { since[code] = performance.now(); sinceF[code] = frame; } keys[code] = true; }
   function release(code) {
     if (!keys[code]) return;
-    if (performance.now() - (since[code] || 0) >= 70 && frame - (sinceF[code] || 0) >= 2) { pending.delete(code); keys[code] = false; }
+    if (performance.now() - (since[code] || 0) >= 70 && frame - (sinceF[code] || 0) >= 2) { pending.delete(code); virt.delete(code); keys[code] = false; }
     else pending.add(code);
   }
-  function flushReleases() { for (const c of [...pending]) if (performance.now() - (since[c] || 0) >= 70 && frame - (sinceF[c] || 0) >= 2) { pending.delete(c); keys[c] = false; } }
+  function flushReleases() { for (const c of [...pending]) if (performance.now() - (since[c] || 0) >= 70 && frame - (sinceF[c] || 0) >= 2) { pending.delete(c); virt.delete(c); keys[c] = false; } }
   const ALL = ['KeyA', 'KeyD', 'KeyW', 'KeyS', 'Space', 'ShiftLeft', 'KeyJ', 'KeyC', 'KeyF'];
-  const releaseAll = () => { pending.clear(); for (const c of ALL) keys[c] = false; };
+  const releaseAll = () => { pending.clear(); for (const c of ALL) if (virt.has(c)) { keys[c] = false; virt.delete(c); } };   // só solta o que o toque apertou (não a tecla de verdade)
 
   // ---- modos por estado do jogo ----
   const B = {
@@ -41,7 +56,7 @@
     dodge: { code: 'ShiftLeft', label: 'Esquiva', cls: 'b-dodge' },
     atk: { code: 'KeyJ', label: 'Bater', cls: 'b-atk' },
     throw: { code: 'KeyC', label: 'Lançar', cls: 'b-throw', aim: true },
-    special: { code: 'KeyF', label: 'Chuva', cls: 'b-special' },
+    special: { code: 'KeyF', label: 'Pregos', cls: 'b-special' },
   };
   const MODES = {
     walk: { joy: 'xy', buttons: [B.jump, B.run] },                         // lobby, Nature (EPIs e torre)
@@ -65,8 +80,10 @@
     if (cfg.joy === 'xy') { setDir('KeyW', dy / R < -tu); setDir('KeyS', dy / R > t + .1); } else { setDir('KeyW', false); setDir('KeyS', false); }
   }
   function joyEnd() { joyId = null; base.classList.remove('on'); idle.style.opacity = ''; for (const c in dirs) setDir(c, false); knob.style.transform = ''; }
+  let tapT = 0, tapX = 0, tapY = 0;                                       // toque curto na área do joystick = clique no mundo (placas)
   zone.addEventListener('pointerdown', e => {
     if (joyId !== null) return;
+    tapT = performance.now(); tapX = e.clientX; tapY = e.clientY;
     e.preventDefault(); joyId = e.pointerId; zone.setPointerCapture(e.pointerId);
     const r = zone.getBoundingClientRect(), R = base.offsetWidth / 2 || 60;
     cx = Math.max(r.left + R, Math.min(r.right - R, e.clientX)); cy = Math.max(r.top + R, Math.min(r.bottom - R, e.clientY));
@@ -74,6 +91,9 @@
     joyMove(e.clientX, e.clientY);
   });
   zone.addEventListener('pointermove', e => { if (e.pointerId === joyId) { e.preventDefault(); joyMove(e.clientX, e.clientY); } });
+  zone.addEventListener('pointerup', e => {
+    if (e.pointerId === joyId && performance.now() - tapT < 280 && Math.hypot(e.clientX - tapX, e.clientY - tapY) < 14 && window.worldTap) window.worldTap(e.clientX, e.clientY);
+  });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(ev, e => { if (e.pointerId === joyId) joyEnd(); });
 
   // ---- botões ----

@@ -14,7 +14,7 @@ const Runner = (() => {
   const PX = 260;                     // posição horizontal do Genésio
   const GRAV = 3200, JUMP = 1150;
   const COIN_PTS = 50;
-  const FRAMES = { idle: 1, run: 4, hurt: 4, die: 4, jump: 5, fly: 8, hrun: 4, hjump: 5, pickup: 5, lose: 5, heart: 5, hheart: 5 };
+  const FRAMES = { idle: 1, run: 13, hurt: 4, die: 4, jump: 5, fly: 8, hrun: 13, hjump: 5, pickup: 5, lose: 5, heart: 5, hheart: 5 };
   const SCALE = { idle: 0.75, run: 1.05, hurt: 1.4, die: 1.4, jump: 1.45, hrun: 1.05, hjump: 1.45, pickup: 1, lose: 1, heart: 1, hheart: 1 };
   const DIR = 'fase-nova-igua%C3%A7u/oasis/';
   const el = id => document.getElementById(id);
@@ -300,7 +300,7 @@ const Runner = (() => {
       const n = 5, i = Math.min(n - 1, Math.floor(g.fx.t / g.fx.dur * n));
       return [g.fx.kind === 'heart' ? (g.helmet > 0 ? 'hheart' : 'heart') : g.fx.kind, i];
     }
-    if (g.hurtT > 0) return ['hurt', Math.min(2, Math.floor((0.6 - g.hurtT) / 0.2))];
+    if (g.hurtT > 0) return ['hurt', Math.min(3, Math.floor((0.6 - g.hurtT) / 0.15))];     // cai e se levanta
     if (g.phase === 'ready') return ['idle', 0];
     const h = g.helmet > 0;
     // bloqueou uma batida: capacete balança, cara de susto (quadro 2 da sequência de perder o capacete)
@@ -311,7 +311,7 @@ const Runner = (() => {
       const p = g.vz > 250 ? 1 : g.vz > -250 ? 2 : 3;
       return [pre + 'jump', g.z < 14 ? (g.vz > 0 ? 0 : 4) : p];
     }
-    return [pre + 'run', Math.floor(g.animT * (7 + g.speed / 70)) % 4];
+    return [pre + 'run', Math.floor(g.animT * (7 + g.speed / 70) * 13 / 4 * 0.5) % 13];
   }
 
   function drawObjects(ctx) {

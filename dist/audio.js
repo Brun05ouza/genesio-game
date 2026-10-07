@@ -46,6 +46,7 @@ const Sound = (() => {
     setSfx(v) { S.sfx = v; apply(); save(); },
     toggleMusic() { S.muteMusic = !S.muteMusic; apply(); save(); return S.muteMusic; },
     toggleSfx() { S.muteSfx = !S.muteSfx; apply(); save(); return S.muteSfx; },
+    blip(low) { if (ac) { if (low) tone(150 + Math.random() * 45, ac.currentTime, 0.07, 'sawtooth', sfxGain, 0.3); else tone(760 + Math.random() * 110, ac.currentTime, 0.045, 'square', sfxGain, 0.22); } },
     click() { if (ac) tone(660, ac.currentTime, 0.08, 'square', sfxGain, 0.5); },
     jump() { if (ac) tone(300, ac.currentTime, 0.22, 'square', sfxGain, 0.5, 700); },
     hit() { if (ac) { tone(220, ac.currentTime, 0.25, 'sawtooth', sfxGain, 0.6, 70); } },

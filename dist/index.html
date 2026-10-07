@@ -26,9 +26,11 @@
 <div id="ui">
   <!-- carregamento -->
   <section id="loading" class="screen active">
-    <div class="logo small">GENÉSIO</div>
-    <div class="bar"><div id="barFill"></div></div>
-    <p id="loadText">Carregando... 0%</p>
+    <div class="lobby-stage">
+      <img src="assets/lobby-loading.webp" alt="Carregando o lobby" draggable="false">
+      <div class="lobby-bar"><div id="barFill"></div></div>
+      <p id="loadText">Carregando lobby... 0%</p>
+    </div>
   </section>
 
   <!-- menu principal: arte + animações por cima (os botões da arte são áreas clicáveis) -->
@@ -83,6 +85,7 @@
         <div class="srow r1" style="top:22%"><span class="lbl">Música</span><input type="range" id="volMusic" min="0" max="100"><button id="muteMusic" class="icon" title="Música"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 5.5a9 9 0 0 1 0 13" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>
         <div class="srow r2" style="top:51.6%"><span class="lbl">Efeitos</span><input type="range" id="volSfx" min="0" max="100"><button id="muteSfx" class="icon" title="Efeitos sonoros"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 5.5a9 9 0 0 1 0 13" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>
         <div class="srow r3" style="top:79.6%"><span class="lbl">Tela cheia</span><button id="btnFull" class="sbtn">Alternar</button></div>
+        <div class="srow r4" style="top:83%"><span class="lbl">Inverter botões</span><button id="btnSwap" class="sbtn" aria-pressed="false">Não</button></div>
       </div>
       <button id="btnBack" class="mhot" aria-label="Voltar">Voltar</button>
     </div>
@@ -244,6 +247,17 @@
     </div>
   </section>
 
+  <!-- conversa estilo Pokémon FireRed (toque/clique para passar) -->
+  <div id="talk" hidden>
+    <button id="talkSkip" class="btn small" type="button">Pular ⏭</button>
+    <img id="talkPic" alt="" draggable="false" src="assets/menu-g-a.webp">
+    <div class="talk-box">
+      <div id="talkWho" class="talk-who">Genésio</div>
+      <p id="talkText"></p>
+      <span id="talkMore" hidden>▼</span>
+    </div>
+  </div>
+
   <section id="sOverlay" class="screen" role="dialog" aria-labelledby="sTitle">
     <div class="panel dialog">
       <h2 id="sTitle">Pausado</h2>
@@ -262,9 +276,10 @@
       <p id="fInfo"></p>
       <p class="small">Espaço / W / ↑ / clique: impulso · cada pilar ultrapassado vale 1 ponto</p>
       <div class="dialog-btns col">
-        <button id="fPrimary" class="btn primary">Continuar</button>
-        <button id="fExit" class="btn">Sair para Teresópolis</button>
+        <button id="fPrimary" class="btn primary"><span id="fPrimaryTxt">Continuar</span><kbd id="fPrimaryKey">Espaço</kbd></button>
+        <button id="fExit" class="btn"><span>Sair para Teresópolis</span><kbd id="fExitKey">Esc</kbd></button>
       </div>
+      <p class="small kbd-help">↑ ↓ escolher · Enter confirmar</p>
     </div>
   </section>
   <!-- controles de toque (só aparecem no celular, no lobby, no Nature e no Solar do Bosque) -->
@@ -313,6 +328,7 @@
 <script src="solar.js"></script>
 <script src="flow-data.js"></script>
 <script src="flow.js"></script>
+<script src="talk.js"></script>
 <script src="game.js"></script>
 <script src="menu.js"></script>
 <script src="settings.js"></script>

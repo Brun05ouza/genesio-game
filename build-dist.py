@@ -11,8 +11,8 @@ from PIL import Image
 sys.stdout.reconfigure(encoding='utf-8')
 files = json.load(open('build-files.json', encoding='utf-8'))
 # arquivos do app instalável / carregador, que o rastreador de rede não enxerga
-EXTRA = ['loader.js', 'pwa.js', 'sw.js', 'manifest.webmanifest', 'favicon.ico'] + sorted('icons/' + f for f in os.listdir('icons') if f.endswith('.png'))
-files = sorted(set(files) | set(EXTRA))
+EXTRA = sorted('frames/' + f for f in os.listdir('frames') if f.endswith('.png')) + ['fase-teresopolis/teresopolis-arco.png', 'fase-solar-do-bosque/sprites/nail.png', 'fase-solar-do-bosque/sprites/nail-box.png', 'fase-teresopolis/teresopolis-mapa.png', 'fase-teresopolis/teresopolis-colisao.png', 'map/lobby-mask.png', 'assets/lobby-loading.jpg', 'loader.js', 'talk.js', 'pwa.js', 'sw.js', 'manifest.webmanifest', 'favicon.ico'] + sorted('icons/' + f for f in os.listdir('icons') if f.endswith('.png'))
+files = sorted((set(files) | set(EXTRA)) - {'fase-teresopolis/Isometric Modern Residential Complex.png', 'fase-teresopolis/water-mask.png'})   # o mapa antigo (com fundo azul) não vai mais
 
 LOSSLESS_HINT = ('mask', 'sheet')        # máscaras e a folha de sprites são lidas pixel a pixel: nunca com perdas
 SMALL = 6 * 1024                         # ícones minúsculos ficam sem perdas; o resto vai com perdas leves (o alfa continua exato)
@@ -55,7 +55,7 @@ for name in out:
 h = hashlib.sha1()
 for name in sorted(out): h.update(name.encode()); h.update(open(os.path.join('dist', name), 'rb').read())
 version = h.hexdigest()[:10]
-core = ['./'] + [n for n in out if n != 'sw.js' and (n.endswith(('.js', '.css', '.html', '.webmanifest', '.ico')) or n.startswith('icons/') or n.startswith('assets/menu') or n.startswith('assets/settings'))]
+core = ['./'] + [n for n in out if n != 'sw.js' and (n.endswith(('.js', '.css', '.html', '.webmanifest', '.ico')) or n.startswith('icons/') or n.startswith('assets/menu') or n.startswith('assets/lobby') or n.startswith('assets/settings'))]
 p = os.path.join('dist', 'sw.js'); s = open(p, encoding='utf-8').read()
 s = s.replace("const VERSION = 'dev';", "const VERSION = '%s';" % version).replace('const CORE = [];', 'const CORE = %s;' % json.dumps(core, ensure_ascii=False))
 open(p, 'w', encoding='utf-8').write(s)

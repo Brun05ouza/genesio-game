@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 const VW = canvas.width, VH = canvas.height;
 
 // ---- carregar imagens ----
-const ANIMS = { idle: 1, walk: 8, run: 4, jump: 5 };
+const ANIMS = { idle: 1, walk: 13, run: 13, jump: 5 };     // quadros do Genésio (tools/make_mascot_frames.py)
 const SCALE = { idle: 0.78, walk: 1, run: 1.05, jump: 1.35 }; // iguala o tamanho visual dos frames
 const MAP_FILE = 'map/new-map.webp';
 let MAP_ZOOM = 1.5;        // zoom do mapa na tela (cada fase define o seu, para o Genésio ficar na proporção certa)
@@ -12,13 +12,16 @@ const frames = {};
 let mapImg = new Image();
 // fases: cada uma tem seu mapa; encostar na borda de baixo leva à próxima
 const LEVELS = {
-  praca:  { file: MAP_FILE, start: [627, 780], next: 'iguacu', name: 'Lobby', enter: 'Voltando para o Lobby' },
+  praca:  { file: MAP_FILE, start: [627, 780], next: 'iguacu', name: 'Lobby', enter: 'Voltando para o Lobby', mask: 'map/lobby-mask.webp' },   // colisão: fonte, canteiros, bancos, postes, muros e árvores
   iguacu: { file: 'fase-nova-igua%C3%A7u/map-nova-igua%C3%A7u.webp', start: [630, 1215], next: 'praca', name: 'Nova Iguaçu', enter: 'Entrando na área de Nova Iguaçu' },
   // mapa isométrico grande (1448x1086): zoom baixo para ver bastante do mapa, e Genésio menor para manter a proporção com bancos, carros e postes
   teresopolis: {
-    file: 'fase-teresopolis/Isometric%20Modern%20Residential%20Complex.webp',
-    zoom: 2.0, charScale: 0.55, free: true,     // sem colisão; visão aberta e Genésio menor, na proporção do mapa
-    start: [590, 845], waterExit: { file: 'fase-teresopolis/water-mask.webp', to: 'praca' },   // passou da rua e chegou na água: volta ao lobby
+    file: 'fase-teresopolis/teresopolis-mapa.webp',
+    zoom: 1.8, charScale: 0.85,
+    mask: 'fase-teresopolis/teresopolis-colisao.webp',          // só ruas, calçadas e a rotatória são andáveis; veja make_serra_mask.py
+    start: [690, 760],                               // chega pela rua central, logo depois do arco
+    exitSouth: { y: 945, x0: 600, x1: 800, to: 'praca' },
+    front: { file: 'fase-teresopolis/teresopolis-arco.webp', x: 556, y: 800 },   // arco desenhado por cima do Genésio (ele passa por trás/por baixo); veja tools/make_serra_arch.py   // passou do arco (já fora do condomínio): volta para o lobby
     name: 'Teresópolis', enter: 'Entrando na área de Teresópolis', theme: 'serra',
     tips: ['Subindo a serra...', 'Respirando ar fresco...', 'Procurando o Oásis...', 'Quase lá...'],
   },
@@ -55,10 +58,13 @@ const done = () => {
   pending--;
   const pct = Math.round((1 - pending / total) * 100);
   $('barFill').style.width = pct + '%';
-  $('loadText').textContent = `Carregando... ${pct}%`;
+  $('loadText').textContent = `Carregando lobby... ${pct}%`;
   if (pending === 0) setTimeout(() => { ready = true; show('menu'); }, 400);
 };
 mapImg.onload = done; mapImg.src = MAP_FILE; levelImgs.praca = mapImg;
+// colisão do lobby (se falhar, o jogo segue sem colisão)
+pending++; total++;
+loadMask(LEVELS.praca.mask).then(m => { LEVELS.praca.maskData = m; if (levelId === 'praca') walkMask = m; }).catch(() => {}).finally(done);
 for (const [name, n] of Object.entries(ANIMS)) {
   frames[name] = [];
   for (let i = 0; i < n; i++) {
@@ -74,7 +80,8 @@ for (const [name, n] of Object.entries(ANIMS)) {
 const keys = {};
 addEventListener('keydown', e => {
   if (e.code === 'Escape') {
-    if (state === 'playing') openMenu();
+    if (state === 'talk') Talk.skip();
+    else if (state === 'playing') openMenu();
     else if (state === 'settings') show('menu');
     else if (state === 'menu' && started) startGame();
     else if (state === 'runner') Runner.togglePause();
@@ -141,10 +148,11 @@ function update(dt) {
   player.wx = nx; player.wy = ny;
   const lvNow = LEVELS[levelId], next = lvNow.next;
   if (next && player.wy >= mapImg.height - 12) goToLevel(next);
-  if (lvNow.waterExit && waterMask && waterAt(player.wx, player.wy + 2)) goToLevel(lvNow.waterExit.to);
-  // lobby: atravessar o portal de Teresópolis pelos vãos laterais leva à fase
-  if (levelId === 'praca') for (const gt of GATES) {
-    if (player.wy < gt.y - 38 && Math.abs(player.wx - gt.x) < gt.w / 2) goToLevel('teresopolis');
+  if (lvNow.exitSouth && player.wy > lvNow.exitSouth.y && player.wx > lvNow.exitSouth.x0 && player.wx < lvNow.exitSouth.x1) goToLevel(lvNow.exitSouth.to);
+  // arcos: atravessar pelos vãos laterais leva à outra área (lobby -> Teresópolis pelo norte; Teresópolis -> lobby pelo sul)
+  for (const gt of GATES) {
+    if (gt.level !== levelId || Math.abs(player.wx - gt.x) >= gt.w / 2) continue;
+    if (gt.side === 'north' ? player.wy < gt.y - 38 : player.wy > gt.y + 22) { goToLevel(gt.to); break; }
   }
 
   if (keys.Space && player.z === 0) { player.vz = JUMP_V; Sound.jump(); }
@@ -156,7 +164,17 @@ function update(dt) {
   player.t += dt;
 }
 
+// camada da frente (ex.: o arco de Teresópolis): aparece por cima do Genésio, como se ele estivesse atrás dela
+const frontImgs = {};
+function drawFront() {
+  const f = LEVELS[levelId].front; if (!f) return;
+  let im = frontImgs[f.file];
+  if (!im) { im = frontImgs[f.file] = new Image(); im.src = f.file; }
+  if (!im.complete || !im.naturalWidth) return;
+  ctx.drawImage(im, VW / 2 + (f.x - cam.x) * MAP_ZOOM, VH / 2 + (f.y - cam.y) * MAP_ZOOM, im.width * MAP_ZOOM, im.height * MAP_ZOOM);
+}
 function drawMap() {
+  ctx.fillStyle = '#0b2418'; ctx.fillRect(0, 0, VW, VH);      // fora do mapa (onde a água é transparente) fica o verde bem escuro
   ctx.drawImage(mapImg, VW / 2 - cam.x * MAP_ZOOM, VH / 2 - cam.y * MAP_ZOOM,
     mapImg.width * MAP_ZOOM, mapImg.height * MAP_ZOOM);
 }
@@ -166,14 +184,14 @@ const SIGNS = [
   { level: 'praca',  x: 548, y: 1085, text: 'NOVA IGUAÇU',       dir: 'down', w: 118 },
   { level: 'iguacu', x: 630, y: 535,  text: 'OÁSIS RESIDENCIAL', dir: 'up',   w: 150, oasis: true },
   // Teresópolis: Nature e Solar do Bosque à frente do Genésio; Flow Residencial na rua de trás
-  { level: 'teresopolis', x: 727, y: 633, text: 'NATURE',            dir: 'up',   w: 76,  ss: 0.68, nature: true },   // esquina do meio (a rua reta)
-  { level: 'teresopolis', x: 854, y: 702, text: 'SOLAR DO BOSQUE',   dir: 'up',   w: 142, ss: 0.68, solar: true },   // rua da direita
-  { level: 'teresopolis', x: 552, y: 577, text: 'FLOW RESIDENCIAL',  dir: 'down', w: 152, ss: 0.68, flow: true },   // rua de trás (esquerda)
+  { level: 'teresopolis', x: 570, y: 460, text: 'NATURE',            dir: 'up',   w: 76,  ss: 0.68, nature: true },   // rotatória, subindo a rua central
+  { level: 'teresopolis', x: 960, y: 860, text: 'SOLAR DO BOSQUE',   dir: 'up',   w: 142, ss: 0.68, solar: true },   // rua principal, à direita do cruzamento
+  { level: 'teresopolis', x: 470, y: 850, text: 'FLOW RESIDENCIAL',  dir: 'up',   w: 152, ss: 0.68, flow: true },   // rua da esquerda, perto do arco
 ];
 // portal de pedra "Teresópolis" na rua de cima do lobby (x/y = centro da base). solid = trechos (fração da largura) onde há pedra no chão
 const GATES = [
   { level: 'praca', file: 'fase-teresopolis/gateway.webp', x: 627, y: 190, w: 306, pix: 150, name: [676, 130, 64, 590],
-    solid: [[0.017, 0.19], [0.382, 0.626], [0.81, 0.995]] },
+    solid: [[0.017, 0.19], [0.382, 0.626], [0.81, 0.995]], to: 'teresopolis', side: 'north', pad: 12 },
 ];
 for (const gt of GATES) {
   gt.img = new Image();
@@ -201,7 +219,8 @@ function gateBlocked(wx, wy) {            // pés dentro da base de pedra do por
     if (gt.level !== levelId) continue;
     if (wy < gt.y - 14 || wy > gt.y + 6) continue;
     const left = gt.x - gt.w / 2;
-    for (const [a, b] of gt.solid) if (wx > left + a * gt.w - 12 && wx < left + b * gt.w + 12) return true;
+    const pad = gt.pad === undefined ? 12 : gt.pad;
+    for (const [a, b] of gt.solid) if (wx > left + a * gt.w - pad && wx < left + b * gt.w + pad) return true;
   }
   return false;
 }
@@ -238,7 +257,9 @@ function drawSign(sg) {
   // placa
   const bx = -bw / 2, by = -poleH - bh * 0.55;
   ctx.fillStyle = '#1f7a4d'; ctx.strokeStyle = '#08150f'; ctx.lineWidth = 3;
+  if (sg === hoverSign) { ctx.shadowColor = '#fff3b0'; ctx.shadowBlur = 16 * Z; ctx.fillStyle = '#27a063'; }
   ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 6 * Z); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(bx + 3 * Z, by + 3 * Z, bw - 6 * Z, bh - 6 * Z, 4 * Z); ctx.stroke();
   // texto e seta (seta na frente do texto quando aponta para cima, atrás quando aponta para baixo)
@@ -264,8 +285,8 @@ function drawPlayer() {
     const p = player.vz > 170 ? 1 : player.vz > -170 ? 2 : 3;
     idx = player.z < 12 && player.vz > 0 ? 0 : player.z < 12 ? 4 : p;
   } else if (player.moving) {
-    if (player.running) { anim = 'run'; idx = Math.floor(player.t * 14) % 4; }
-    else { anim = 'walk'; idx = Math.floor(player.t * 12) % 8; }
+    if (player.running) { anim = 'run'; idx = Math.floor(player.t * 17) % 13; }
+    else { anim = 'walk'; idx = Math.floor(player.t * 11) % 13; }
   } else {
     anim = 'idle';
   }
@@ -323,7 +344,7 @@ function loop(now) {
     } else if (state === 'fplay') {
       Flow.update(dt);
       Flow.draw(ctx);
-    } else if (state === 'playing' || state === 'prompt') {
+    } else if (state === 'playing' || state === 'prompt' || state === 'talk') {
       if (state === 'playing') { update(dt); checkOasisSign(); }
       updateCamera(player.wx, player.wy);
       drawMap();
@@ -334,6 +355,7 @@ function loop(now) {
       ];
       for (const sg of signs) if (sg.y <= player.wy) sg.draw();
       drawPlayer();
+      drawFront();
       for (const sg of signs) if (sg.y > player.wy) sg.draw();
     } else {
       // fundo do menu: câmera passeando pelo mapa
@@ -349,6 +371,7 @@ requestAnimationFrame(loop);
 // ---- telas / menu ----
 let state = 'loading', started = false;
 function show(name) {
+  if (name !== 'talk' && typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip();      // saiu da conversa por outro caminho (menu, etc.)
   state = name;
   for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'lvload']) $(id).classList.toggle('active', id === name);
   if (name !== 'runner') $('rOverlay').classList.remove('active');
@@ -360,11 +383,30 @@ function show(name) {
   document.body.classList.toggle('playing', name === 'playing' || name === 'runner' || name === 'nplay' || name === 'kplay' || name === 'hplay' || name === 'splay' || name === 'fplay');
   if (name === 'menu') { $('btnStart').textContent = started ? 'Continuar' : 'Começar'; $('menu').classList.toggle('started', started); }
 }
+// conversa de boas-vindas (só quando começa um jogo novo; "Continuar" volta direto)
+function welcomeScript() {
+  const touch = document.body.classList.contains('touch');
+  return [
+    { pose: 'a', text: 'Olá! Que bom ver você por aqui!' },
+    { pose: 'b', text: 'Eu sou o Genésio e vou ser o seu guia nesta aventura pela cidade.' },
+    { pose: 'c', text: 'Tem muita coisa para descobrir: Nova Iguaçu, Teresópolis, o Oásis, o Solar do Bosque e até um Golem gigante!' },
+    { pose: 'd', text: touch ? 'No celular é só seguir as setinhas e os botões que aparecem na tela. Simples assim!'
+      : 'Use as setas ou WASD para andar, Shift para correr e Espaço para pular. É fácil, você vai pegar rapidinho!' },
+    { pose: 'e', text: 'Fique de olho nas placas pelo caminho: elas levam para as fases. Chegou perto, é só aceitar o desafio!' },
+    { pose: 'b', text: 'E lembre: o mais importante não é chegar primeiro, é se divertir pelo caminho. Eu acredito em você!' },
+    { pose: 'a', text: 'Pronto? Então vamos nessa. Boa aventura!' },
+  ];
+}
 function startGame() {
   Sound.startMusic();
+  const first = !started;
   started = true;
   for (const k in keys) keys[k] = false;
   show('playing');
+  if (first && typeof Talk !== 'undefined') {
+    show('talk');
+    Talk.start(welcomeScript(), () => { for (const k in keys) keys[k] = false; if (state === 'talk') show('playing'); });
+  }
 }
 function openMenu() { show('menu'); }
 
@@ -408,10 +450,10 @@ async function goToLevel(id) {
   const lv = LEVELS[id], fromLevel = levelId;
   toast(lv.enter, 2600);
   $('desertTitle').textContent = lv.name;
-  const scr = lv.theme === 'serra' ? 'serra' : 'desert';
+  const scr = lv.theme === 'serra' ? 'serra' : id === 'praca' ? 'loading' : 'desert';      // lobby: a mesma arte do carregamento inicial
   await wait(1600);
   show(scr); state = 'transition';
-  const bar = scr === 'serra' ? $('serraFill') : $('desertFill'), txt = scr === 'serra' ? $('serraText') : $('desertText');
+  const bar = $({ serra: 'serraFill', loading: 'barFill' }[scr] || 'desertFill'), txt = $({ serra: 'serraText', loading: 'loadText' }[scr] || 'desertText');
   const tips = lv.tips || ['Aquecendo o asfalto...', 'Procurando o caminho...', 'Espantando os urubus...', 'Quase lá...'];
   const t0 = performance.now(), MIN = 3500;
   bar.style.width = '0%';
@@ -424,7 +466,7 @@ async function goToLevel(id) {
   while (!img || (lv.mask && !mask) || (lv.waterExit && !water) || performance.now() - t0 < MIN) {
     const p = Math.min((performance.now() - t0) / MIN, 1) * (img ? 100 : 90);
     bar.style.width = p + '%';
-    txt.textContent = tips[Math.min(3, Math.floor(p / 26))];
+    txt.textContent = scr === 'loading' ? `Voltando para o lobby... ${Math.round(p)}%` : tips[Math.min(3, Math.floor(p / 26))];
     await wait(60);
   }
   bar.style.width = '100%';
@@ -453,6 +495,36 @@ function checkOasisSign() {
     if (d < (sg.nature || sg.solar || sg.flow ? 40 : 55)) { promptSign = sg; promptBlocked = true; openPrompt(sg.flow ? 'flow' : sg.solar ? 'solar' : sg.nature ? 'nature' : 'oasis'); return; }
   }
 }
+// ---- clicar/tocar numa placa também abre o convite para iniciar a fase ----
+let hoverSign = null;
+const signKind = sg => sg.flow ? 'flow' : sg.solar ? 'solar' : sg.nature ? 'nature' : sg.oasis ? 'oasis' : null;
+function signAtClient(cx, cy) {
+  if (state !== 'playing') return null;
+  const c = $('c'), r = c.getBoundingClientRect();
+  const sx = (cx - r.left) * VW / r.width, sy = (cy - r.top) * VH / r.height;
+  for (const sg of SIGNS) {
+    if (sg.level !== levelId || !signKind(sg)) continue;
+    const px = VW / 2 + (sg.x - cam.x) * MAP_ZOOM, py = VH / 2 + (sg.y - cam.y) * MAP_ZOOM, Z = MAP_ZOOM * (sg.ss || 1);
+    const bw = Math.max(sg.w * Z, 40), top = py - 70 * Z - 48 * Z * 0.55;
+    const pad = 10 * (r.width / VW > 0 ? VW / r.width : 1);              // folga de ~10 px na tela, para o dedo
+    if (sx >= px - bw / 2 - pad && sx <= px + bw / 2 + pad && sy >= top - pad && sy <= py + 12 + pad) return sg;
+  }
+  return null;
+}
+function clickSign(sg) {
+  promptSign = sg; promptBlocked = true;
+  Sound.init(); Sound.click();
+  openPrompt(signKind(sg));
+}
+$('c').addEventListener('click', e => { const sg = signAtClient(e.clientX, e.clientY); if (sg) clickSign(sg); });
+$('c').addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;
+  hoverSign = signAtClient(e.clientX, e.clientY);
+  $('c').style.cursor = hoverSign ? 'pointer' : '';
+});
+$('c').addEventListener('pointerleave', () => { hoverSign = null; $('c').style.cursor = ''; });
+window.worldTap = (cx, cy) => { const sg = signAtClient(cx, cy); if (sg) clickSign(sg); };     // toque curto vindo da área do joystick (touch.js)
+
 function openPrompt(kind) {
   promptKind = kind;
   $('promptText').innerHTML = kind === 'flow' ? 'Iniciar Fase<br>Flow Residencial?<br><small>Voe com a nave pelos pilares.</small>' : kind === 'solar' ? 'Iniciar Fase<br>Solar do Bosque?<br><small>Martelo, plataformas e um golem no final.</small>' : kind === 'nature' ? 'Iniciar Fase<br>Nature?' : 'Iniciar Fase<br>Oásis Residencial?';

@@ -70,3 +70,12 @@ button,.btn,.card,.icon{touch-action:manipulation}
   .card img{display:none}
   .logo{font-size:clamp(28px,12vh,48px)}
 }
+
+/* controles invertidos (Configurações › Inverter botões): joystick à direita, botões à esquerda */
+#touch .btns{position:absolute;inset:0;pointer-events:none}
+body.swap #touch .joy-zone{left:auto;right:0}
+body.swap #touch .joy-idle{left:auto;right:calc(var(--u) * 17);transform:translate(50%,0)}
+body.swap #touch .btns{transform:scaleX(-1)}
+body.swap #touch .tbtn{transform:scaleX(-1)}
+body.swap #touch .tbtn.on{transform:scaleX(-1) translateY(3px) scale(.95)}
+body.swap #touch .b-throw.on{transform:scaleX(-1)}

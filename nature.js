@@ -27,13 +27,13 @@ const Nature = (() => {
     { x0: 938,  x1: 1018, y: 585 },                // ilha pequena
     { x0: 815,  x1: 950,  y: 650 },                // ilha sobre a lagoa
     { x0: 960,  x1: 1230, y: 328 },                // ilha grande
-    { x0: 1230, x1: 1530, y: 320 },                // ponte de corda
+    { x0: 1230, x1: 1530, y: 330, pts: [[1230, 329], [1400, 331], [1440, 326], [1480, 312], [1520, 296], [1530, 294]] },   // ponte de corda (sobe até o penhasco)
     { x0: 1165, x1: 1672, y: 500 },                // plataforma da direita
     { x0: 1525, x1: 1672, y: 268 },                // penhasco de cima
     { x0: 1180, x1: 1345, y: 638 },                // mesa de madeira
     { x0: 1470, x1: 1672, y: 685, solid: true },     // degrau baixo da direita
   ];
-  const WALLS = [{ x: 1472, y0: 700 }];            // paredão da direita (abaixo do degrau)
+  let WALLS = [];                                    // paredões (gerados de PLATFORMS em newGame)
   const LADDER = { x: 1527, top: 500, bottom: 685 };
 
   const EPIS = [
@@ -47,8 +47,8 @@ const Nature = (() => {
     { id: 'cinto',     name: 'Cinto de segurança',  x: 1380, y: 500 },
   ];
 
-  const FRAMES = { idle: 1, walk: 8, run: 4, jump: 5, ladder: 6 };
-  const SCALE = { idle: 0.78 * 0.577, walk: 0.577, run: 1.05 * 0.577, jump: 1.35 * 0.577, ladder: 0.5 };
+  const FRAMES = { idle: 1, walk: 13, run: 13, jump: 5, ladder: 6, cheer: 2 };
+  const SCALE = { idle: 0.78 * 0.577, walk: 0.577, run: 1.05 * 0.577, jump: 1.35 * 0.577, ladder: 0.5, cheer: 0.577 };
   const el = id => document.getElementById(id);
 
   let imgs = null, loading = null, g = null, running = false, debug = false;
@@ -83,6 +83,7 @@ const Nature = (() => {
       drop: null, dropT: 0, phase: 'ready', readyT: 0, timeLeft: ch.time, got: new Set(), popups: [], paused: false, won: false,
       endT: 0, coinsEarned: 0,
     };
+    WALLS = buildWalls(PLATFORMS);
     hideOverlay();
   }
   async function start(id) { await load(); newGame(id); running = true; }
@@ -126,12 +127,41 @@ const Nature = (() => {
   }
 
   // ---- física ----
+  // plataformas inclinadas (pontes de corda): pts = [[x, y], ...] com o chão de verdade da ponte
+  const platY = (p, x) => {
+    const q = p.pts; if (!q) return p.y;
+    if (x <= q[0][0]) return q[0][1];
+    for (let i = 1; i < q.length; i++) if (x <= q[i][0]) return q[i - 1][1] + (q[i][1] - q[i - 1][1]) * (x - q[i - 1][0]) / (q[i][0] - q[i - 1][0]);
+    return q[q.length - 1][1];
+  };
+  // Paredões automáticos: quando uma plataforma (ponte, ilha, chão) termina colada num penhasco bem mais alto, o miolo do penhasco é
+  // sólido; sem isso o Genésio entrava nele e caía num "vão". Só bloqueia abaixo do topo do penhasco (por cima dele dá para passar).
+  function buildWalls(list) {
+    const w = [];
+    for (const L of list) for (const H of list) {
+      if (L === H) continue;
+      for (const [lx, hx] of [[L.x1, H.x0], [L.x0, H.x1]]) {
+        if (Math.abs(lx - hx) > 8) continue;
+        const ly = platY(L, lx), hy = platY(H, hx);
+        if (ly - hy > 34 && ly - hy <= 170) w.push({ x: lx + (lx === L.x1 ? 2 : -2), y0: hy + 4, y1: ly + 40, L, H, dir: lx === L.x1 ? 1 : -1 });
+      }
+    }
+    return w;
+  }
+  function wallPush(px) {                                  // aplica os paredões ao movimento horizontal deste quadro
+    for (const w of WALLS) {
+      if (g.y <= w.y0 || g.y > w.y1) continue;
+      if (px <= w.x && g.x > w.x) g.x = w.x;
+      else if (px >= w.x && g.x < w.x) g.x = w.x;
+    }
+  }
   const inRange = (p, x) => x >= p.x0 - 3 && x <= p.x1 + 3;
   function landing(x, prevY, y) {
-    let best = null;
+    let best = null, by = 0;
     for (const p of PLATFORMS) {
       if (p === g.drop) continue;
-      if (inRange(p, x) && prevY <= p.y + 2 && y >= p.y && (!best || p.y < best.y)) best = p;
+      const py = platY(p, x);
+      if (inRange(p, x) && prevY <= py + 2 && y >= py && (!best || py < by)) { best = p; by = py; }
     }
     return best;
   }
@@ -157,6 +187,7 @@ const Nature = (() => {
     const speed = (keys.ShiftLeft || keys.ShiftRight) ? RUN : WALK;
     if (ax) g.facing = ax;
     if (g.dropT > 0) { g.dropT -= dt; if (g.dropT <= 0) g.drop = null; }
+    if (g.cheerT > 0) g.cheerT -= dt;
 
     if (g.climb) {                                       // subindo / descendo a escada
       if (jump && !g.jumpHeld) { g.climb = false; g.vy = -520; g.vx = ax * 160; g.plat = null; g.jumpHeld = true; Sound.jump(); }
@@ -178,7 +209,7 @@ const Nature = (() => {
         g.vx = ax * speed;
         const px = g.x;
         g.x = Math.min(1650, Math.max(22, g.x + g.vx * dt));
-        for (const w of WALLS) if (g.y > w.y0 && px <= w.x && g.x > w.x) g.x = w.x;
+        wallPush(px);
         // pular / descer por plataforma fina
         if (jump && !g.jumpHeld && g.plat && !down) { g.vy = -JUMP; g.plat = null; Sound.jump(); }
         else if (down && g.plat && !g.plat.solid) { g.drop = g.plat; g.dropT = 0.3; g.plat = null; g.y += 3; }
@@ -187,17 +218,17 @@ const Nature = (() => {
         if (g.plat) {
           if (!inRange(g.plat, g.x)) g.plat = null;
           else {                                         // pequenos degraus sobem sozinhos
-            for (const p of PLATFORMS) if (p !== g.plat && inRange(p, g.x) && p.y < g.y && p.y >= g.y - 34) { g.plat = p; g.y = p.y; break; }
+            for (const p of PLATFORMS) { const py = platY(p, g.x); if (p !== g.plat && inRange(p, g.x) && py < g.y && py >= g.y - 34) { g.plat = p; g.y = py; break; } }
           }
         }
-        if (g.plat) { g.vy = 0; g.y = g.plat.y; }
+        if (g.plat) { g.vy = 0; g.y = platY(g.plat, g.x); }
         else {
           const prevY = g.y;
           g.vy += GRAV * dt;
           g.y += g.vy * dt;
           if (g.vy >= 0) {
             const p = landing(g.x, prevY, g.y);
-            if (p) { g.plat = p; g.y = p.y; if (g.vy > 300) Sound.land(); g.vy = 0; }
+            if (p) { g.plat = p; g.y = platY(p, g.x); if (g.vy > 300) Sound.land(); g.vy = 0; }
           }
           if (g.y > 941) { g.y = 941; g.vy = 0; }
         }
@@ -210,7 +241,7 @@ const Nature = (() => {
     for (const e of EPIS) {
       if (g.got.has(e.id)) continue;
       if (Math.hypot(g.x - e.x, (g.y - 46) - (e.y - 52)) < 46) {
-        g.got.add(e.id); Sound.coin();
+        g.got.add(e.id); Sound.coin(); g.cheerT = 0.9;
         g.popups.push({ text: e.name, x: e.x, y: e.y - 100, t: 0 });
         if (g.got.size === EPIS.length) { finish(true); return; }
       }
@@ -226,8 +257,9 @@ const Nature = (() => {
     }
     if (Math.abs(g.vx) > 1) {
       const run = keys.ShiftLeft || keys.ShiftRight;
-      return run ? ['run', Math.floor(g.animT * 14) % 4] : ['walk', Math.floor(g.animT * 12) % 8];
+      return run ? ['run', Math.floor(g.animT * 17) % 13] : ['walk', Math.floor(g.animT * 11) % 13];
     }
+    if (g.cheerT > 0) return ['cheer', Math.floor(g.animT * 6) % 2];     // comemora o EPI que acabou de pegar
     return ['idle', 0];
   }
 
@@ -242,7 +274,7 @@ const Nature = (() => {
 
     if (debug) {
       ctx.strokeStyle = 'rgba(255,0,255,.9)'; ctx.lineWidth = 2;
-      for (const p of PLATFORMS) { ctx.beginPath(); ctx.moveTo(p.x0 * S, p.y * S); ctx.lineTo(p.x1 * S, p.y * S); ctx.stroke(); }
+      for (const p of PLATFORMS) { ctx.beginPath(); ctx.moveTo(p.x0 * S, platY(p, p.x0) * S); if (p.pts) for (const q of p.pts) ctx.lineTo(q[0] * S, q[1] * S); ctx.lineTo(p.x1 * S, platY(p, p.x1) * S); ctx.stroke(); }
       ctx.strokeStyle = 'cyan'; ctx.strokeRect((LADDER.x - 26) * S, LADDER.top * S, 52 * S, (LADDER.bottom - LADDER.top) * S);
     }
 
@@ -264,10 +296,10 @@ const Nature = (() => {
     const w = im.width * sc, h = im.height * sc, fx = g.x * S, fy = g.y * S;
     if (!g.climb) {
       ctx.fillStyle = 'rgba(0,0,0,.3)';
-      ctx.beginPath(); ctx.ellipse(fx, g.plat ? fy - 1 : (landing(g.x, g.y, 941) ? landing(g.x, g.y, 941).y * S : fy) - 1, 24, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(fx, g.plat ? fy - 1 : (landing(g.x, g.y, 941) ? platY(landing(g.x, g.y, 941), g.x) * S : fy) - 1, 24, 6, 0, 0, Math.PI * 2); ctx.fill();
     }
     ctx.save();
-    if (anim !== 'ladder' && g.facing < 0) { ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.translate(-fx, 0); }
+    if (anim !== 'ladder' && anim !== 'cheer' && g.facing < 0) { ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.translate(-fx, 0); }
     ctx.drawImage(im, fx - w / 2, fy - h, w, h);
     ctx.restore();
 
@@ -319,7 +351,7 @@ const Nature = (() => {
     isRunning: () => running,
     restart: () => newGame(g.ch.id),
     coins: getCoins, best: getBest,
-    setDebug: v => { debug = v; },
+    setDebug: v => { debug = v; }, _walls: () => WALLS, _platforms: () => PLATFORMS, platY,
     _debug: () => g,
   };
 })();
