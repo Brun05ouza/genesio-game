@@ -173,6 +173,15 @@ const Account = (() => {
     $('acTabLogin').addEventListener('click', () => setMode('login'));
     $('acTabNew').addEventListener('click', () => setMode('new'));
     $('acLogout').addEventListener('click', logout);
+    $('acLogin').addEventListener('click', async () => {
+      if (typeof Sound !== 'undefined') { Sound.init(); Sound.click(); }
+      openLogin();
+      if (!(await serverUp())) msg('O servidor de contas não respondeu. Você pode tentar entrar mesmo assim ou jogar sem conta.');
+    });
+    $('acGuest').addEventListener('click', () => {
+      if (typeof Sound !== 'undefined') { Sound.init(); Sound.click(); }
+      if (typeof show === 'function') show('menu');
+    });
     refreshChip();
   }
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', wire); else wire();

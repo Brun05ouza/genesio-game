@@ -311,3 +311,6 @@ body.on-login #rotate{display:none!important}               /* em pé dá para d
   .ac-hint{display:none}
   #acSubmit{padding:6px 18px;font-size:18px}
 }
+.ac-guest{background:none;border:0;color:#cfe9db;font:600 14px 'Fredoka',sans-serif;text-decoration:underline;cursor:pointer;padding:2px;align-self:center}
+.ac-guest:hover{color:#fff}
+#login .ac-guest{display:block}

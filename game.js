@@ -80,9 +80,10 @@ for (const [name, n] of Object.entries(ANIMS)) {
 const keys = {};
 const ARROW = { ArrowLeft: 'KeyA', ArrowRight: 'KeyD', ArrowUp: 'KeyW', ArrowDown: 'KeyS' };
 addEventListener('keydown', e => {
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;   // digitando (login): não vira comando do jogo
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.code === 'Escape' && state === 'login') show('menu'); return; }   // digitando (login): não vira comando do jogo
   if (e.code === 'Escape') {
     if (state === 'talk') Talk.skip();
+    else if (state === 'login') show('menu');
     else if (state === 'playing') openMenu();
     else if (state === 'settings') show('menu');
     else if (state === 'menu' && started) startGame();
@@ -427,6 +428,7 @@ function refreshProfileCard() {
   let coins = 0; try { coins = +localStorage.getItem('genesio-coins') || 0; } catch (e) {}
   $('pcCoins').textContent = coins.toLocaleString('pt-BR');
   $('acLogout').hidden = !(nome && state === 'menu');
+  $('acLogin').hidden = !(!nome && state === 'menu');
 }
 setInterval(refreshProfileCard, 500);
 function welcomeScript() {
