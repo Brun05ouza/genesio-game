@@ -1,8 +1,8 @@
 // Conversa de boas-vindas (estilo Pokémon FireRed): aparece ao Começar, texto surge aos poucos, clique/toque/Enter avançam, Pular e Esc encerram.
-// Rode com o jogo em http://localhost:8000 (ou passe a URL como argumento).
+// Rode com o jogo em http://localhost:8010 (servidor só de arquivos: python -m http.server 8010) (ou passe a URL como argumento).
 const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const assert = require('node:assert/strict');
-const URL = process.argv[2] || 'http://localhost:8000';
+const URL = process.argv[2] || 'http://localhost:8010';
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const r = {};

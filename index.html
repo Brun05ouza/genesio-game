@@ -33,6 +33,30 @@
     </div>
   </section>
 
+  <!-- cartão do jogador: Genésio, nome e GenesisCoins (canto superior direito, no menu e nos mapas) -->
+  <div id="profileCard" class="profile-card" hidden>
+    <img src="assets/menu-g-a.png" alt="" draggable="false">
+    <div class="pc-info"><b id="pcName">Visitante</b><span class="pc-coins"><i class="pc-coin" aria-hidden="true"></i><span id="pcCoins">0</span></span></div>
+    <button id="acLogout" type="button" class="btn small" hidden>Sair</button>
+  </div>
+
+  <!-- conta: entrar / criar conta (aparece na abertura quando o servidor está no ar) -->
+  <section id="login" class="screen" aria-labelledby="acTitle">
+    <div class="logo small" id="acTitle">GENÉSIO</div>
+    <form id="acForm" class="panel dialog ac-panel" autocomplete="on" novalidate>
+      <div class="ac-tabs" role="tablist">
+        <button type="button" id="acTabLogin" class="ac-tab on" role="tab" aria-selected="true">Entrar</button>
+        <button type="button" id="acTabNew" class="ac-tab" role="tab" aria-selected="false">Criar conta</button>
+      </div>
+      <label class="ac-row"><span>Nome</span><input id="acName" name="username" type="text" maxlength="20" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label class="ac-row"><span>Senha</span><input id="acPass" name="password" type="password" maxlength="72" autocomplete="current-password" required></label>
+      <label class="ac-row" id="acPass2Row" hidden><span>Repita a senha</span><input id="acPass2" type="password" maxlength="72" autocomplete="new-password"></label>
+      <p id="acMsg" class="ac-msg" role="alert"></p>
+      <button id="acSubmit" type="submit" class="btn primary">Entrar</button>
+      <p id="acHint" class="small ac-hint"></p>
+    </form>
+  </section>
+
   <!-- menu principal: arte + animações por cima (os botões da arte são áreas clicáveis) -->
   <section id="menu" class="screen">
     <div class="mstage" id="mstage">
@@ -338,6 +362,7 @@
 <script src="flow-data.js"></script>
 <script src="flow.js"></script>
 <script src="talk.js"></script>
+<script src="account.js"></script>
 <script src="game.js"></script>
 <script src="menu.js"></script>
 <script src="settings.js"></script>

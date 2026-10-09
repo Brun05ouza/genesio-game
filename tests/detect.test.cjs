@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36';
-  const open = async (o) => { const ctx = await browser.newContext({ deviceScaleFactor: 1, ...o }); const page = await ctx.newPage(); await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready); await page.evaluate(() => show('playing')); await page.waitForTimeout(150); return { ctx, page }; };
+  const open = async (o) => { const ctx = await browser.newContext({ deviceScaleFactor: 1, ...o }); const page = await ctx.newPage(); await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready); await page.evaluate(() => show('playing')); await page.waitForTimeout(150); return { ctx, page }; };
   const st = page => page.evaluate(() => ({ touch: document.body.classList.contains('touch'), controls: !!document.querySelector('#touch.show') }));
   const res = {};
   // 1) desktop comum: sem controles de toque, mesmo mexendo mouse/teclado

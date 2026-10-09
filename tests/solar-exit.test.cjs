@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready);
+  await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready);
   const visible = id => page.locator(id).isVisible();
   // 1) sair pela pausa, no meio da fase
   await page.evaluate(() => { levelId = 'teresopolis'; player.wx = 960; player.wy = 860; show('playing'); checkOasisSign(); });

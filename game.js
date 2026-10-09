@@ -59,7 +59,7 @@ const done = () => {
   const pct = Math.round((1 - pending / total) * 100);
   $('barFill').style.width = pct + '%';
   $('loadText').textContent = `Carregando lobby... ${pct}%`;
-  if (pending === 0) setTimeout(() => { ready = true; show('menu'); }, 400);
+  if (pending === 0) setTimeout(() => { ready = true; if (typeof Account !== 'undefined') Account.gate(); else show('menu'); }, 400);
 };
 mapImg.onload = done; mapImg.src = MAP_FILE; levelImgs.praca = mapImg;
 // colisão do lobby (se falhar, o jogo segue sem colisão)
@@ -80,6 +80,7 @@ for (const [name, n] of Object.entries(ANIMS)) {
 const keys = {};
 const ARROW = { ArrowLeft: 'KeyA', ArrowRight: 'KeyD', ArrowUp: 'KeyW', ArrowDown: 'KeyS' };
 addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;   // digitando (login): não vira comando do jogo
   if (e.code === 'Escape') {
     if (state === 'talk') Talk.skip();
     else if (state === 'playing') openMenu();
@@ -174,6 +175,29 @@ function drawFront() {
   if (!im) { im = frontImgs[f.file] = new Image(); im.src = f.file; }
   if (!im.complete || !im.naturalWidth) return;
   ctx.drawImage(im, VW / 2 + (f.x - cam.x) * MAP_ZOOM, VH / 2 + (f.y - cam.y) * MAP_ZOOM, im.width * MAP_ZOOM, im.height * MAP_ZOOM);
+}
+// ---- conversa de boas-vindas: lugar mostrado na tela ----
+let talkFocus = null;
+const talkCam = { x: 627, y: 780 };
+document.addEventListener('talkline', e => { talkFocus = (e.detail && e.detail.focus) || null; });
+document.addEventListener('talkend', () => { talkFocus = null; });
+function drawFocusArrow(f) {
+  const t = performance.now() / 1000, bob = Math.sin(t * 5) * 10;
+  const px = VW / 2 + (f.x - cam.x) * MAP_ZOOM, py = VH / 2 + (f.y - cam.y) * MAP_ZOOM;
+  const x = Math.max(80, Math.min(VW - 80, px)), y = Math.max(150, Math.min(VH - 230, py));
+  ctx.save();
+  // brilho no chão
+  const gl = ctx.createRadialGradient(x, y, 6, x, y, 90); gl.addColorStop(0, 'rgba(255,230,120,.55)'); gl.addColorStop(1, 'rgba(255,230,120,0)');
+  ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(x, y, 90, 34, 0, 0, Math.PI * 2); ctx.fill();
+  // seta descendo até o lugar
+  ctx.translate(x, y - 46 + bob);
+  ctx.fillStyle = '#ffd34d'; ctx.strokeStyle = '#3a2a05'; ctx.lineWidth = 5; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-16, -58); ctx.lineTo(16, -58); ctx.lineTo(16, -22); ctx.lineTo(34, -22); ctx.lineTo(0, 12); ctx.lineTo(-34, -22); ctx.lineTo(-16, -22); ctx.closePath();
+  ctx.stroke(); ctx.fill();
+  // nome do lugar
+  ctx.font = "700 30px 'Fredoka', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 8; ctx.strokeStyle = '#0b2418'; ctx.strokeText(f.label, 0, -86); ctx.fillStyle = '#fff3b0'; ctx.fillText(f.label, 0, -86);
+  ctx.restore();
 }
 function drawMap() {
   ctx.fillStyle = '#0b2418'; ctx.fillRect(0, 0, VW, VH);      // fora do mapa (onde a água é transparente) fica o verde bem escuro
@@ -348,7 +372,10 @@ function loop(now) {
       Flow.draw(ctx);
     } else if (state === 'playing' || state === 'prompt' || state === 'talk') {
       if (state === 'playing') { update(dt); checkOasisSign(); }
-      updateCamera(player.wx, player.wy);
+      if (talkFocus && state === 'talk') {                       // conversa mostrando um lugar: a câmera desliza até ele
+        talkCam.x += (talkFocus.x - talkCam.x) * Math.min(1, dt * 3.2); talkCam.y += (talkFocus.y - talkCam.y) * Math.min(1, dt * 3.2);
+      } else { talkCam.x += (player.wx - talkCam.x) * Math.min(1, dt * 6); talkCam.y += (player.wy - talkCam.y) * Math.min(1, dt * 6); if (state !== 'talk') { talkCam.x = player.wx; talkCam.y = player.wy; } }
+      updateCamera(talkCam.x, talkCam.y);
       drawMap();
       // as placas ficam "no chão": quem está mais ao norte é desenhado atrás delas
       const signs = [
@@ -359,6 +386,7 @@ function loop(now) {
       drawPlayer();
       drawFront();
       for (const sg of signs) if (sg.y > player.wy) sg.draw();
+      if (talkFocus && state === 'talk') drawFocusArrow(talkFocus);     // por cima das placas
     } else {
       // fundo do menu: câmera passeando pelo mapa
       demoT += dt;
@@ -375,7 +403,9 @@ let state = 'loading', started = false;
 function show(name) {
   if (name !== 'talk' && typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip();      // saiu da conversa por outro caminho (menu, etc.)
   state = name;
-  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'iguacu', 'lvload']) $(id).classList.toggle('active', id === name);
+  document.body.classList.toggle('on-login', name === 'login');
+  if (typeof refreshProfileCard === 'function') refreshProfileCard();
+  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'iguacu', 'lvload', 'login']) $(id).classList.toggle('active', id === name);
   if (name !== 'runner') $('rOverlay').classList.remove('active');
   if (name !== 'nplay') $('nOverlay').classList.remove('active');
   if (name !== 'kplay') $('kOverlay').classList.remove('active');
@@ -386,17 +416,32 @@ function show(name) {
   if (name === 'menu') { $('btnStart').textContent = started ? 'Continuar' : 'Começar'; $('menu').classList.toggle('started', started); }
 }
 // conversa de boas-vindas (só quando começa um jogo novo; "Continuar" volta direto)
+// cartão do jogador: aparece no menu e andando pelos mapas (nas fases cada uma tem o seu placar)
+function refreshProfileCard() {
+  const card = $('profileCard'); if (!card) return;
+  const on = state === 'menu' || state === 'playing' || state === 'prompt';
+  card.hidden = !on;
+  if (!on) return;
+  const nome = typeof Account !== 'undefined' && Account.user();
+  $('pcName').textContent = nome || 'Visitante';
+  let coins = 0; try { coins = +localStorage.getItem('genesio-coins') || 0; } catch (e) {}
+  $('pcCoins').textContent = coins.toLocaleString('pt-BR');
+  $('acLogout').hidden = !(nome && state === 'menu');
+}
+setInterval(refreshProfileCard, 500);
 function welcomeScript() {
   const touch = document.body.classList.contains('touch');
+  const nome = typeof Account !== 'undefined' && Account.user();
   return [
-    { pose: 'a', text: 'Olá! Que bom ver você por aqui!' },
-    { pose: 'b', text: 'Eu sou o Genésio e vou ser o seu guia nesta aventura pela cidade.' },
-    { pose: 'c', text: 'Tem muita coisa para descobrir: Nova Iguaçu, Teresópolis, o Oásis, o Solar do Bosque e até um Golem gigante!' },
+    { pose: 'a', text: nome ? `Olá, ${nome}! Que bom que você está aqui!` : 'Olá! Que bom que você está aqui!' },
+    { pose: 'b', text: 'Eu sou o Genésio e vou ser o seu guia nesta aventura pela cidade. Deixa eu te mostrar o caminho!' },
+    // focus: a câmera vai até o lugar e uma seta aponta para ele
+    { pose: 'c', text: 'Descendo por esta rua você chega em Nova Iguaçu. Lá fica o Oásis Residencial, uma corrida pelo deserto!', focus: { x: 690, y: 1160, label: 'Nova Iguaçu' } },
+    { pose: 'e', text: 'E passando por este portal você sobe a serra até Teresópolis: lá estão o Nature, o Solar do Bosque e o Flow Residencial.', focus: { x: 627, y: 170, label: 'Teresópolis' } },
     { pose: 'd', text: touch ? 'No celular é só seguir as setinhas e os botões que aparecem na tela. Simples assim!'
       : 'Use as setas ou WASD para andar, Shift para correr e Espaço para pular. É fácil, você vai pegar rapidinho!' },
-    { pose: 'e', text: 'Fique de olho nas placas pelo caminho: elas levam para as fases. Chegou perto, é só aceitar o desafio!' },
-    { pose: 'b', text: 'E lembre: o mais importante não é chegar primeiro, é se divertir pelo caminho. Eu acredito em você!' },
-    { pose: 'a', text: 'Pronto? Então vamos nessa. Boa aventura!' },
+    { pose: 'e', text: 'Fique de olho nas placas pelo caminho: elas levam para as fases. Chegou perto ou tocou nelas, é só aceitar o desafio!' },
+    { pose: 'a', text: 'Junte GenesisCoins em todas as fases: elas ficam guardadas na sua conta. Pronto? Então vamos nessa. Boa aventura!' },
   ];
 }
 function startGame() {

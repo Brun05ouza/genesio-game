@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  page.on('response', r => { if (r.status() >= 400 && r.url().startsWith('http://localhost')) errors.push(r.url()); });
-  await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready);
+  page.on('response', r => { if (r.status() >= 400 && r.url().startsWith('http://localhost') && !r.url().includes('/api/')) errors.push(r.url()); });
+  await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready);
   // entrada pela placa real
   await page.evaluate(() => { levelId = 'teresopolis'; player.wx = 470; player.wy = 850; show('playing'); checkOasisSign(); });
   assert.equal(await page.locator('#prompt').getAttribute('class'), 'screen active');

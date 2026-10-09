@@ -76,7 +76,7 @@ const Runner = (() => {
   function showOverlay(kind) {
     el('rTitle').textContent = kind === 'over' ? 'Fim de jogo' : 'Pausado';
     el('rInfo').innerHTML = kind === 'over'
-      ? `Pontos: <b>${points()}</b> · Moedas: <b>${g.coins}</b><br>Recorde (${g.d.label}): <b>${g.best}</b>${g.newRecord ? ' 🏆 novo!' : ''}`
+      ? `Pontos: <b>${points()}</b> · Moedas: <b>${g.coins}</b> <small>(viram GenesisCoins)</small><br>Recorde (${g.d.label}): <b>${g.best}</b>${g.newRecord ? ' 🏆 novo!' : ''}`
       : `Dificuldade: <b>${g.d.label}</b>`;
     el('rPrimary').textContent = kind === 'over' ? 'Jogar de novo' : 'Continuar';
     el('rPrimary').dataset.kind = kind;
@@ -183,6 +183,7 @@ const Runner = (() => {
     g.phase = 'over';
     const score = points();
     if (score > g.best) { g.best = score; g.newRecord = true; setBest(g.key, score); }
+    if (g.coins) { try { localStorage.setItem('genesio-coins', (+localStorage.getItem('genesio-coins') || 0) + g.coins); } catch (e) {} }   // moedas do Oásis viram GenesisCoins
     showOverlay('over');
   }
 

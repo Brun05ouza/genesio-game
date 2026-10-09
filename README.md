@@ -34,5 +34,15 @@ O service worker só é registrado fora do localhost (use `?sw=1` para testar). 
 
 ## Pastas do projeto
 - Raiz: o jogo (`index.html`, `*.js`, `*.css`), `assets/`, `fase-*/`, `frames/`, `map/`, `icons/` e o que publica (`build-dist.py`, `build-files.json`, `build-trace.cjs`, `netlify.toml`).
-- `tests/`: testes automáticos (Playwright). Rode todos com `node tests/run-all.cjs` (jogo em localhost:8000; para testar o `dist/`, sirva-o em localhost:8001 e use `node tests/run-all.cjs http://localhost:8001`). As capturas de tela dos testes vão para `tests/out/` (ignorado pelo Git).
+- `tests/`: testes automáticos (Playwright). Rode todos com `node tests/run-all.cjs` (jogo servido só como arquivos em localhost:8010: `python -m http.server 8010`; para testar o `dist/`, sirva-o em localhost:8001 e use `node tests/run-all.cjs http://localhost:8001`). As capturas de tela dos testes vão para `tests/out/` (ignorado pelo Git).
 - `tools/`: scripts em Python que prepararam as imagens e os dados do jogo (recortes de sprites, máscaras de colisão do lobby e de Teresópolis, ícones do app etc.). Rodam a partir da raiz, por exemplo `python tools/make_serra_mask.py`.
+
+## Contas, moedas e recordes (API + Neon)
+A pasta `server/` tem uma API pequena (Node + Postgres do Neon) com cadastro e login (nome + senha, guardada com hash scrypt).
+Depois de entrar, as GenesisCoins e os recordes de todas as fases vão para a conta e aparecem em qualquer aparelho.
+Sem a API no ar (Netlify, localhost só com arquivos, ou sem internet e sem conta) o jogo funciona como antes, salvando só no aparelho.
+
+- Configurar: copie `server/.env.example` para `server/.env` e coloque a `DATABASE_URL` do Neon. As tabelas são criadas sozinhas (`server/schema.sql`).
+- Rodar no computador: `iniciar.bat` (ou `node server/server.js --port 8000 --static .. --db dev-db.json`) → http://localhost:8000 com login. Sem `.env`, as contas ficam em `server/dev-db.json`.
+- VPS: `server/genesio-api.service` (systemd) e `server/nginx-api.conf` (rota `/api/` no Nginx).
+- Teste: `node tests/account.test.cjs` (com a API em localhost:8002).

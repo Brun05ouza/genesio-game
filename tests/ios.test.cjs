@@ -1,4 +1,4 @@
-// Guia de instalação no iPhone/iPad: o passo certo para cada navegador (rode com o jogo em http://localhost:8000)
+// Guia de instalação no iPhone/iPad: o passo certo para cada navegador (rode com o jogo em http://localhost:8010 (servidor só de arquivos: python -m http.server 8010))
 const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const assert = require('node:assert/strict');
 const SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
@@ -14,7 +14,7 @@ const CASES = {
   for (const [name, c] of Object.entries(CASES)) {
     const ctx = await browser.newContext({ viewport: { width: c.w || 390, height: c.h || 844 }, hasTouch: true, isMobile: true, userAgent: c.ua });
     const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message));
-    await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready);
+    await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready);
     // abre sozinho na primeira visita, com o jogo no menu
     await page.waitForFunction(() => !document.getElementById('iosHelp').hidden, null, { timeout: 8000 });
     const r = await page.evaluate(() => ({ title: document.getElementById('iosTitle').textContent, steps: document.querySelectorAll('#iosSteps li').length,
@@ -31,7 +31,7 @@ const CASES = {
   }
   // Android/desktop: nada de guia do iPhone
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 } }); const page = await ctx.newPage();
-  await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready); await page.waitForTimeout(2500);
+  await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready); await page.waitForTimeout(2500);
   assert.ok(await page.evaluate(() => document.getElementById('iosHelp').hidden && document.getElementById('btnInstall').hidden), 'desktop sem guia');
   await browser.close(); console.log('iOS: OK');
 })().catch(e => { console.error(e); process.exit(1); });

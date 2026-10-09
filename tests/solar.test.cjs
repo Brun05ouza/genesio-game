@@ -6,8 +6,8 @@ const assert = require('node:assert/strict');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  page.on('response', r => { if (r.status() >= 400 && r.url().startsWith('http://localhost')) errors.push(r.url()); });
-  await page.goto((process.argv[2] || 'http://localhost:8000'));
+  page.on('response', r => { if (r.status() >= 400 && r.url().startsWith('http://localhost') && !r.url().includes('/api/')) errors.push(r.url()); });
+  await page.goto((process.argv[2] || 'http://localhost:8010'));
   await page.waitForFunction(() => ready);
   // Enter through the actual map sign and confirmation button.
   await page.evaluate(() => { levelId = 'teresopolis'; player.wx = 960; player.wy = 860; show('playing'); checkOasisSign(); });

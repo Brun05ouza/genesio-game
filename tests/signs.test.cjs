@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready);
+  await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready);
   const ev = fn => page.evaluate(fn);
   const prompt = async () => ({ open: (await page.locator('#prompt').getAttribute('class')).includes('active'), text: (await page.locator('#promptText').innerText()).replace(/\s+/g, ' ') });
   const at = async (x, y) => { await ev(`player.wx = ${x}; player.wy = ${y}; checkOasisSign()`); return prompt(); };

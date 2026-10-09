@@ -13,6 +13,7 @@ const Talk = (() => {
     root.classList.toggle('right', l.side === 'right'); root.classList.toggle('boss', !!l.boss); root.classList.toggle('dim', !!l.dim);
     if (l.pic) pic.src = l.pic; else if (l.pose) pic.src = poseSrc(l.pose);
     pic.classList.remove('hop'); void pic.offsetWidth; pic.classList.add('hop');
+    document.dispatchEvent(new CustomEvent('talkline', { detail: l }));
     root.classList.add('typing'); more.hidden = true; txt.textContent = '';
     clearInterval(timer);
     timer = setInterval(() => {
@@ -36,6 +37,7 @@ const Talk = (() => {
     active = false; clearInterval(timer);
     root.classList.add('leaving');
     setTimeout(() => { if (!active) { root.hidden = true; root.classList.remove('leaving', 'typing', 'right', 'boss', 'dim'); } }, 220);
+    document.dispatchEvent(new CustomEvent('talkend'));
     const cb = onEnd; onEnd = null; if (cb) cb();
   }
   function start(script, done) {

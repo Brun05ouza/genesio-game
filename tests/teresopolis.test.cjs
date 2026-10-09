@@ -1,8 +1,8 @@
 // Mapa de Teresópolis: só a parte de baixo é andável, as placas ficam alcançáveis e o arco da entrada leva de volta ao lobby.
-// Rode com o jogo em http://localhost:8000 (ou passe a URL como argumento).
+// Rode com o jogo em http://localhost:8010 (servidor só de arquivos: python -m http.server 8010) (ou passe a URL como argumento).
 const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const assert = require('node:assert/strict');
-const URL = process.argv[2] || 'http://localhost:8000';
+const URL = process.argv[2] || 'http://localhost:8010';
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();

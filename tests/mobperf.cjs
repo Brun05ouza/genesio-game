@@ -10,7 +10,7 @@ const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary
   const errs = [], bytes = { n: 0 }; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   page.on('response', async r => { try { const b = (await r.body()).length; bytes.n += b; } catch (e) {} if (r.status() >= 400) errs.push(r.status() + ' ' + r.url()); });
   const t0 = Date.now();
-  await page.goto('http://localhost:8000'); await page.waitForFunction(() => ready, null, { timeout: 120000 });
+  await page.goto('http://localhost:8010'); await page.waitForFunction(() => ready, null, { timeout: 120000 });
   console.log('abrir o jogo (ate o menu):', ((Date.now() - t0) / 1000).toFixed(1) + 's', (bytes.n / 1e6).toFixed(1) + 'MB');
   const mem = async () => { const m = await cdp.send('Runtime.evaluate', { expression: 'JSON.stringify(performance.memory ? {used: Math.round(performance.memory.usedJSHeapSize/1e6)} : {})', returnByValue: true }); return m.result.value; };
   const measure = async (name, fn, waitState) => {

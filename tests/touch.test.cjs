@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
   const cdp = await ctx.newCDPSession(page);
   let tid = 0;
   const touch = async (type, x, y, id = 0) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id }] });
-  await page.goto((process.argv[2] || 'http://localhost:8000')); await page.waitForFunction(() => ready);
+  await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready);
   const ev = (f, a) => page.evaluate(f, a);
   const visible = sel => page.evaluate(s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.offsetWidth > 0; }, sel);
 

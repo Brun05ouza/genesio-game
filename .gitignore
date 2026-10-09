@@ -29,3 +29,6 @@ tests/out/
 tools/out/
 fase-teresopolis/Cozy Pixel-Art Residential Garden District.png
 assets/iguacu-loading-original.png
+server/node_modules/
+server/.env
+server/dev-db.json

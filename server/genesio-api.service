@@ -1,0 +1,19 @@
+# Serviço da API do Genésio (systemd). Instalação na VPS:
+#   sudo cp /var/www/genesio-game/server/genesio-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now genesio-api
+[Unit]
+Description=API do jogo Genesio (contas, moedas e recordes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/var/www/genesio-game/server
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+User=www-data
+Environment=NODE_ENV=production
+# DATABASE_URL e PORT ficam em /var/www/genesio-game/server/.env
+
+[Install]
+WantedBy=multi-user.target

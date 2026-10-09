@@ -3,7 +3,7 @@ const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   page.on('pageerror', e => console.log('ERR', e.message));
-  await page.goto('http://localhost:8000'); await page.waitForFunction(() => ready);
+  await page.goto('http://localhost:8010'); await page.waitForFunction(() => ready);
   const res = await page.evaluate(async ([MINGAP, FIXED]) => {
     const out = [];
     const GRAV = Flow.GRAV, FLAP = Flow.FLAP, MAXFALL = Flow.MAXFALL, HW = Flow.HIT.w, HH = Flow.HIT.h, HDY = Flow.HIT.dy, BX = Flow.BX, MH = Flow.MH;

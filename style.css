@@ -266,3 +266,48 @@ body.touch #talkSkip{top:max(12px,env(safe-area-inset-top))}
 /* retrato sempre com a base alinhada à caixa da fala (vence as regras antigas de altura/posição) */
 #talk #talkPic,#talk.boss #talkPic{bottom:var(--mb);height:auto}
 @media (max-height:480px){#talk #talkPic,#talk.boss #talkPic{bottom:var(--mb);height:auto;max-height:72vh}}
+
+
+/* ===== cartão do jogador (canto superior direito) ===== */
+.profile-card{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));z-index:4;display:flex;align-items:center;gap:10px;
+  padding:6px 12px 6px 6px;border-radius:16px;background:rgba(8,40,26,.9);border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink),0 8px 18px rgba(0,0,0,.35);
+  color:#fff;font-family:'Fredoka',sans-serif;pointer-events:auto;zoom:var(--k,1)}
+.profile-card[hidden]{display:none}
+.profile-card img{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.pc-info{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.pc-info b{font-size:17px;max-width:11em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-coins{display:flex;align-items:center;gap:6px;font-weight:700;font-size:16px;color:#ffd34d}
+.pc-coin{display:inline-block;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3b0,#f2b632 55%,#a8700c);border:2px solid #5a3a06}
+.profile-card .btn.small{margin-left:4px}
+.touch .profile-card{zoom:1}
+@media (max-height:480px){.profile-card{padding:4px 10px 4px 4px;gap:7px}.profile-card img{width:36px;height:36px}.pc-info b{font-size:15px}.pc-coins{font-size:14px}}
+
+
+/* ===== conta: entrar / criar conta ===== */
+#login{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%);z-index:6}
+.ac-panel{width:min(92vw,420px);gap:12px;align-items:stretch}
+.ac-tabs{display:flex;gap:6px;background:rgba(0,0,0,.25);border-radius:12px;padding:4px}
+.ac-tab{flex:1;font:700 17px 'Fredoka',sans-serif;color:#cfe9db;background:transparent;border:0;border-radius:9px;padding:8px 6px;cursor:pointer}
+.ac-tab.on{background:var(--g2);color:#fff;box-shadow:0 2px 0 var(--ink)}
+.ac-row{display:flex;flex-direction:column;gap:4px;text-align:left;font:600 15px 'Fredoka',sans-serif;color:#d8f5e6}
+.ac-row[hidden]{display:none}
+.ac-row input{font:600 18px 'Fredoka',sans-serif;padding:10px 12px;border-radius:10px;border:3px solid var(--ink);background:#fffdf0;color:#14251c;outline:none;
+  -webkit-user-select:text;user-select:text;touch-action:manipulation}
+.ac-row input:focus{border-color:#f2b632;box-shadow:0 0 0 3px rgba(242,182,50,.35)}
+.ac-msg{min-height:1.3em;margin:0;font:600 14px 'Fredoka',sans-serif;color:#ffb0a0}
+.ac-msg.ok{color:#b8ffcf}
+.ac-hint{margin:0;font-size:13px}
+#acSubmit:disabled{opacity:.6;cursor:wait}
+body.on-login #rotate{display:none!important}               /* em pé dá para digitar melhor: não pede para girar */
+@media (max-height:480px){
+  #login{gap:6px}
+  #login .logo.small{font-size:clamp(22px,8vh,34px)}
+  .ac-panel{width:min(92vw,520px);gap:6px;padding:8px 14px}
+  .ac-row{flex-direction:row;align-items:center;gap:10px}
+  .ac-row span{flex:0 0 7.5em;font-size:14px}
+  .ac-row input{flex:1;min-width:0;padding:5px 10px;font-size:16px;border-width:2px}
+  .ac-tab{font-size:15px;padding:4px}
+  .ac-msg{min-height:1.1em;font-size:13px}
+  .ac-hint{display:none}
+  #acSubmit{padding:6px 18px;font-size:18px}
+}

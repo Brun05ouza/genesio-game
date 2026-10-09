@@ -1,7 +1,7 @@
 // Oásis: a velocidade cresce com os pontos (a cada 500 pontos um nível a mais, com aviso), até o teto da dificuldade.
 const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const assert = require('node:assert/strict');
-const URL = process.argv[2] || 'http://localhost:8000';
+const URL = process.argv[2] || 'http://localhost:8010';
 (async () => {
   const b = await chromium.launch({ headless: true, channel: 'msedge' }); const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));

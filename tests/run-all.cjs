@@ -1,11 +1,11 @@
 // Roda todos os testes automáticos em sequência e mostra um resumo.
-// Uso (da raiz do projeto, com o jogo em http://localhost:8000):   node tests/run-all.cjs
+// Uso (da raiz do projeto, com o jogo em http://localhost:8010 (servidor só de arquivos: python -m http.server 8010)):   node tests/run-all.cjs
 //      contra o dist/ (servido em http://localhost:8001):          node tests/run-all.cjs http://localhost:8001
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const url = process.argv[2] || 'http://localhost:8000';
-const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.cjs')).sort();
+const url = process.argv[2] || 'http://localhost:8010';
+const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.cjs') && f !== 'account.test.cjs').sort();   // account.test.cjs precisa da API: rode à parte
 const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });       // capturas de tela dos testes ficam aqui (ignorado pelo Git)
 let bad = 0;
 for (const f of files) {
