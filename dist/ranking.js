@@ -12,7 +12,7 @@ const Ranking = (() => {
       { key: 'genesio-best-normal', name: 'Normal', unit: v => fmt(v) + ' pts' },
       { key: 'genesio-best-dificil', name: 'Difícil', unit: v => fmt(v) + ' pts' }] },
     { id: 'nature', name: 'Nature', logo: 'assets/logos/Nature.webp', boards: [
-      { key: 'genesio-nature-best-epi', name: 'EPIs', unit: v => fmt(v) + ' de 8 EPIs' },
+      { key: 'genesio-nature-time-epi', name: 'EPIs', time: true, unit: v => (v / 1000).toFixed(2).replace('.', ',') + ' s' },
       { key: 'genesio-climb-best', name: 'Torre', unit: v => fmt(v) + ' m' },
       { key: 'genesio-hop-best', name: 'Subida infinita', unit: v => fmt(v) + ' pts' }] },
     { id: 'solar', name: 'Solar do Bosque', logo: 'assets/logos/solar-do-bosque.webp', boards: [
@@ -47,7 +47,7 @@ const Ranking = (() => {
     const sub = group.boards.length > 1;
     $('rkSub').hidden = !sub;
     $('rkSub').innerHTML = sub ? group.boards.map(b => `<button type="button" class="rk-subtab${b === board ? ' on' : ''}" data-k="${b.key}">${esc(b.name)}</button>`).join('') : '';
-    $('rkTitle2').textContent = group.name + (sub ? ' · ' + board.name : group.id === 'geral' ? ' · mais GenesisCoins' : '');
+    $('rkTitle2').textContent = group.name + (sub ? ' · ' + board.name + (board.time ? ' · menor tempo para os 8 EPIs' : '') : group.id === 'geral' ? ' · mais GenesisCoins' : '');
   }
   function row(r, rank, isMe) {
     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank + 'º';
@@ -66,7 +66,7 @@ const Ranking = (() => {
     }
     if (id !== reqId) return;
     const me = typeof Account !== 'undefined' && Account.user();
-    if (!data.top.length) { $('rkList').innerHTML = '<li class="rk-info">Ninguém pontuou aqui ainda. Que tal ser o primeiro? 🏁</li>'; }
+    if (!data.top.length) { $('rkList').innerHTML = '<li class="rk-info">' + (board.time ? 'Colete os 8 EPIs para registrar seu tempo. O menor tempo vence! ⏱' : 'Ninguém pontuou aqui ainda. Que tal ser o primeiro? 🏁') + '</li>'; }
     else $('rkList').innerHTML = data.top.map((r, i) => row(r, i + 1, me && data.me && data.me.rank === i + 1)).join('');
     const inTop = data.me && data.me.rank <= data.top.length;
     if (data.me && !inTop) { $('rkMe').hidden = false; $('rkMe').innerHTML = '<p>Sua posição</p><ul class="rk-list">' + row(data.me, data.me.rank, true) + '</ul>'; }

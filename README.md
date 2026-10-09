@@ -23,10 +23,14 @@ Se criar arquivos novos (imagens etc.), atualize antes a lista com `node build-t
 - Celular (na horizontal): joystick e botões aparecem no lobby, Nature e Solar do Bosque.
 - Solar no celular: o botão **Lançar** é também a mira — toque rápido lança para a frente; segure e arraste para mirar (a distância é a força) e solte para lançar.
 - Solar do Bosque: escolha Fácil, Normal ou Difícil ao entrar pela placa. A dificuldade altera a vida, a resistência e o ritmo dos inimigos; as tentativas mantêm o modo escolhido. Recordes e ranking são separados por modo. O recorde antigo permanece no Normal.
+- Nature, EPIs: o ranking compara o menor tempo real para coletar os oito EPIs, em segundos. Contagem inicial e pause ficam fora; derrotas não registram tempo. A quantidade antiga continua salva como conquista, sem ser convertida em tempo.
+- Nature, Subida infinita: plataformas têm uma rota contínua dentro do alcance do salto; no alto há menos apoios laterais e algumas ilhas se movem horizontalmente. A câmera acelera conforme a altura conquistada.
+- Subida infinita: escolha **Horizontal** (celular deitado, joystick/teclado, mais espaço lateral) ou **Vertical** (celular em pé, inclinação para os lados, mais visão da subida). A paisagem é contínua desde o início. Na vertical há também botões Esquerda/Direita; no pause, **Recalibrar inclinação** define novamente a posição confortável ao continuar e **Trocar modo** começa uma nova tentativa. Enquanto o celular estiver na orientação errada, a partida aguarda sem avançar. O sensor precisa de HTTPS e, em alguns aparelhos, de permissão de movimento; quando indisponível, use os botões. O app instalado permite ambas as orientações.
+- Teresópolis: placas nas ruas laterais indicam **Petrópolis — em breve** à esquerda e **Nova Friburgo — em breve** à direita.
 
 ## Multiplayer no lobby
 
-Jogadores conectados à conta entram automaticamente no lobby online. O botão **Online** mostra quantos estão no mesmo mapa e permite ficar offline ou reconectar. Em **Configurações → Jogar offline**, escolha **Sim** para jogar sem entrar no multiplayer; a preferência fica salva no aparelho e também pode ser alterada pelo pause das fases. Lobby, Nova Iguaçu e Teresópolis têm presenças separadas; movimento, corrida, salto, nome e foto do perfil aparecem aos outros jogadores. Até 32 jogadores visíveis por mapa. As fases continuam individuais: ao entrar, o personagem sai da área compartilhada e reaparece ao retornar. Visitantes podem continuar jogando offline.
+Jogadores conectados à conta entram automaticamente no lobby online. O botão **Online** mostra quantos estão no mesmo mapa e permite ficar offline ou reconectar. Em **Configurações → Jogar offline**, escolha **Sim** para jogar sem entrar no multiplayer; a preferência fica salva no aparelho e também pode ser alterada pelo pause das fases. Lobby, Nova Iguaçu e Teresópolis têm presenças separadas; movimento, corrida, salto, nome e foto do perfil aparecem aos outros jogadores. Até 32 jogadores visíveis por mapa. As fases continuam individuais: enquanto joga, o personagem permanece no mapa de origem alternando `assets/jogando-1.png` e `assets/jogando-2.png`, com o nome do jogo acima. O pause preserva esse estado; ao sair da fase, a imagem normal retorna. Visitantes podem continuar jogando offline.
 
 Para rodar tudo localmente, use `node server/server.js --port 8000 --static ..` (configure o banco em `server/.env`, ou omita `DATABASE_URL` para um banco de teste em memória). Teste com duas contas em navegadores/perfis diferentes. Só o servidor de arquivos do Python não oferece multiplayer.
 
@@ -44,6 +48,8 @@ O site é instalável e funciona sem internet depois da primeira visita (tela ch
 - **Android (Chrome):** aparece o aviso "Instalar" (ou menu ⋮ → *Instalar app*).
 - **iPhone/iPad (Safari):** Compartilhar → *Adicionar à Tela de Início* (o botão 📲 do menu mostra o passo a passo).
 O service worker só é registrado fora do localhost (use `?sw=1` para testar). Teste automático: `node tests/pwa.test.cjs` com o `dist/` servido em localhost:8001.
+
+O jogo verifica novas publicações ao abrir, ao voltar à aba, ao recuperar a conexão e a cada 90 segundos. Quando detecta uma versão diferente, mostra **Nova versão disponível** e congela a partida até tocar em **Atualizar agora**. O loading acompanha o download dos arquivos e permanece até o jogo novo abrir. Moedas e recordes já salvos são preservados; a partida atual reinicia. Um download incompleto mantém o cache anterior e oferece nova tentativa. Sem internet, a versão instalada continua funcionando. Publique todo o `dist/`, incluindo `version.json`, `updater.js` e `sw.js`, juntos. Teste de duas publicações e falha de download: `node tests/update.test.cjs`.
 
 ## Pastas do projeto
 - Raiz: o jogo (`index.html`, `*.js`, `*.css`), `assets/`, `fase-*/`, `frames/`, `map/`, `icons/` e o que publica (`build-dist.py`, `build-files.json`, `build-trace.cjs`, `netlify.toml`).

@@ -8,6 +8,8 @@ const URL = process.argv[2] || 'http://localhost:8010';
   const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   await page.goto(URL); await page.waitForFunction(() => ready);
+  await page.waitForFunction(() => ['login', 'menu'].includes(state));
+  if (await page.evaluate(() => state === 'login')) await page.click('#acGuest');
   const ev = (f, a) => page.evaluate(f, a);
   const r = {};
   // entra pelo arco do lobby (passando pelo vão lateral), como o jogador faz
@@ -34,9 +36,48 @@ const URL = process.argv[2] || 'http://localhost:8010';
     const ok = (x, y) => { for (let dx = -step; dx <= step; dx += step) for (let dy = -step; dy <= step; dy += step) if (seen.has(key(x + dx, y + dy))) return true; return false; };
     return { signs: SIGNS.filter(s => s.level === 'teresopolis').map(s => ok(s.x, s.y)), arch: [ok(655, 960), ok(760, 960)], plaza: ok(690, 480), cells: seen.size };
   });
-  r.placasAlcancaveis = reach.signs.length === 3 && reach.signs.every(Boolean);
+  r.placasAlcancaveis = reach.signs.length === 5 && reach.signs.every(Boolean);
+  r.cidadesEmBreve = await ev(() => {
+    const left = SIGNS.find(s => s.soon && s.dir === 'left'), right = SIGNS.find(s => s.soon && s.dir === 'right');
+    return left?.text === 'PETRÓPOLIS' && right?.text === 'NOVA FRIBURGO' && !signKind(left) && !signKind(right);
+  });
   r.arcoAlcancavel = reach.arch.every(Boolean);
   r.praçaAlcancavel = reach.plaza;
+  // Percorre as rotas pelo resolvedor de movimento, incluindo esquinas perto das placas.
+  r.rotasSemPrender = await ev(() => {
+    const step = 4, start = [690, 760], index = (x, y) => y * walkMask.w + x;
+    const parents = new Map([[index(...start), null]]), queue = [start];
+    for (let i = 0; i < queue.length; i++) {
+      const [x, y] = queue[i];
+      for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) {
+        const nx = x + dx, ny = y + dy, key = index(nx, ny);
+        if (parents.has(key) || !canWalk(nx, ny) || !canWalk(x + dx / 2, y + dy / 2)) continue;
+        parents.set(key, [x, y]); queue.push([nx, ny]);
+      }
+    }
+    for (const [tx, ty] of [[570, 460], [960, 860], [470, 850], [640, 570], [752, 812], [900, 850]]) {
+      const end = queue.find(([x, y]) => Math.hypot(x - tx, y - ty) <= 4);
+      if (!end) throw new Error('Ponto sem rota: ' + tx + ',' + ty);
+      const path = []; let p = end;
+      while (p) { path.push(p); p = parents.get(index(...p)); }
+      player.wx = start[0]; player.wy = start[1];
+      for (const [x, y] of path.reverse()) {
+        moveOnMap(x - player.wx, y - player.wy);
+        if (Math.hypot(x - player.wx, y - player.wy) > 0.1 || !canWalk(player.wx, player.wy)) throw new Error('Travou indo para ' + x + ',' + y + ' em ' + player.wx + ',' + player.wy);
+      }
+    }
+    return true;
+  });
+  r.paredeFinaERecuperacao = await ev(() => {
+    const saved = { mask: walkMask, image: mapImg, level: levelId, x: player.wx, y: player.wy };
+    try {
+      levelId = 'praca'; mapImg = { width: 40, height: 30 }; walkMask = { w: 40, h: 30, data: new Uint8Array(1200).fill(1) };
+      for (let y = 0; y < 30; y++) walkMask.data[y * 40 + 15] = 0;
+      player.wx = 5; player.wy = 10; moveOnMap(25, 0); const solid = player.wx < 15 && canWalk(player.wx, player.wy);
+      walkMask.data[10 * 40 + 9] = 0; player.wx = 9.2; player.wy = 10.2; moveOnMap(0, 0);
+      return solid && canWalk(player.wx, player.wy) && Math.hypot(player.wx - 9.2, player.wy - 10.2) <= 2;
+    } finally { walkMask = saved.mask; mapImg = saved.image; levelId = saved.level; player.wx = saved.x; player.wy = saved.y; }
+  });
   // as placas abrem o convite quando o Genésio chega perto
   for (const [x, y, kind] of [[570, 460, 'nature'], [960, 860, 'solar'], [470, 850, 'flow']]) {
     await ev(([x, y]) => { show('playing'); promptBlocked = false; promptSign = null; player.wx = x; player.wy = y + 4; checkOasisSign(); }, [x, y]);

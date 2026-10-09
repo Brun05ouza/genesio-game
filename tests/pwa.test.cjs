@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
   await page.goto((process.argv[2] || 'http://localhost:8001') + '/?sw=1'); await page.waitForFunction(() => ready);
   const r = {};
   const mf = await page.evaluate(async () => { const l = document.querySelector('link[rel=manifest]'); const m = await (await fetch(l.href)).json(); const ok = []; for (const i of m.icons) ok.push((await fetch(new URL(i.src, l.href))).ok); return { m, ok }; });
-  r.manifest = mf.m.display_override.includes('fullscreen') && mf.m.orientation === 'landscape' && mf.m.icons.length >= 3;
+  r.manifest = mf.m.display_override.includes('fullscreen') && mf.m.orientation === 'any' && mf.m.icons.length >= 3;
   r.icons = mf.ok.every(Boolean);
   r.tags = await page.evaluate(() => !!document.querySelector('link[rel=apple-touch-icon]') && !!document.querySelector('link[rel=icon]'));
   await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true), null, { timeout: 15000 });

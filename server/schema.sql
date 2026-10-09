@@ -14,7 +14,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS skin text NOT NULL DEFAULT 'classico'
 CREATE TABLE IF NOT EXISTS scores (
   user_id    integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   key        text NOT NULL,                      -- ex.: genesio-best-normal, genesio-flow-best, genesio-climb-best
-  value      bigint NOT NULL,                    -- o melhor resultado (só aumenta)
+  value      bigint NOT NULL,                    -- maior pontuação; para nature-time-epi, menor tempo em milissegundos
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, key)
 );

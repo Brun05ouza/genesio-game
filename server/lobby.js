@@ -2,6 +2,7 @@
 'use strict';
 const { WebSocketServer, WebSocket } = require('ws');
 const MAPS = { praca: [1254, 1254], iguacu: [1254, 1254], teresopolis: [1448, 1086] };
+const GAMES = new Set(['oasis', 'epi', 'climb', 'hop', 'solar', 'flow']);
 function createLobby(server, { authenticate, profile }) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 2048, perMessageDeflate: false });
   const players = new Map(), dirty = new Set();
@@ -54,7 +55,8 @@ function createLobby(server, { authenticate, profile }) {
           return;
         }
         if (previous) dirty.add(previous.level);
-        entry.position = { level: data.level, visible: data.visible === true, x: Math.max(0, Math.min(w, data.x)), y: Math.max(0, Math.min(h, data.y)), z: Math.max(0, Math.min(160, data.z)), vz: Math.max(-700, Math.min(700, data.vz)), facing: data.facing < 0 ? -1 : 1, moving: data.moving === true, running: data.running === true };
+        const game = GAMES.has(data.game) ? data.game : null;
+        entry.position = { level: data.level, visible: data.visible === true, game, x: Math.max(0, Math.min(w, data.x)), y: Math.max(0, Math.min(h, data.y)), z: game ? 0 : Math.max(0, Math.min(160, data.z)), vz: game ? 0 : Math.max(-700, Math.min(700, data.vz)), facing: data.facing < 0 ? -1 : 1, moving: !game && data.moving === true, running: !game && data.running === true };
         entry.lastState = now; dirty.add(data.level);
         if (!previous || previous.level !== data.level) snapshot(ws, data.level);
       } catch (e) { ws.close(4400, 'Não foi possível entrar no lobby'); }
@@ -75,7 +77,9 @@ function createLobby(server, { authenticate, profile }) {
     ws.matchesToken = value => token === value;
   });
   const tick = setInterval(() => {
-    for (const p of players.values()) if (p.position?.visible && Date.now() - p.lastState > 15000) { p.position.visible = false; dirty.add(p.position.level); }
+    // O marcador de uma fase permanece mesmo quando o navegador suspende o loop
+    // da aba; o heartbeat e o fechamento do socket removem conexões abandonadas.
+    for (const p of players.values()) if (p.position?.visible && !p.position.game && Date.now() - p.lastState > 15000) { p.position.visible = false; dirty.add(p.position.level); }
     for (const level of dirty) if (Object.hasOwn(MAPS, level)) for (const p of players.values()) if (p.position?.level === level) snapshot(p.ws, level);
     dirty.clear();
   }, 100);

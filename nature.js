@@ -74,6 +74,9 @@ const Nature = (() => {
   const bestKey = id => 'genesio-nature-best-' + id;
   const getBest = id => { try { return +localStorage.getItem(bestKey(id)) || 0; } catch (e) { return 0; } };
   const setBest = (id, v) => { try { localStorage.setItem(bestKey(id), v); } catch (e) {} };
+  const TIME_KEY = 'genesio-nature-time-epi'; // milissegundos reais; o menor tempo de uma missão completa vence
+  const bestTime = () => { try { return +localStorage.getItem(TIME_KEY) || 0; } catch (e) { return 0; } };
+  const formatTime = ms => (ms / 1000).toFixed(2).replace('.', ',') + ' s';
 
   // ---- partida ----
   function newGame(id) {
@@ -81,7 +84,7 @@ const Nature = (() => {
     g = {
       ch, x: 120, y: 768, vx: 0, vy: 0, plat: PLATFORMS[0], facing: 1, climb: false, climbT: 0, animT: 0, jumpHeld: true,
       drop: null, dropT: 0, phase: 'ready', readyT: 0, timeLeft: ch.time, got: new Set(), popups: [], paused: false, won: false,
-      endT: 0, coinsEarned: 0,
+      endT: 0, coinsEarned: 0, elapsed: 0, resultTime: 0, newTimeRecord: false,
     };
     WALLS = buildWalls(PLATFORMS);
     hideOverlay();
@@ -99,7 +102,7 @@ const Nature = (() => {
     if (kind === 'pause') { title = 'Pausado'; info = `${n} de ${total} EPIs · faltam ${Math.ceil(g.timeLeft)} s no relógio`; }
     else if (kind === 'win') {
       title = 'Missão cumprida! 🎉';
-      info = `Você pegou todos os <b>${total} EPIs</b> a tempo.<br>🪙 <b>+${REWARD} GenesisCoins</b><br><small>Total: ${getCoins()} GenesisCoins</small>`;
+      info = `Você pegou todos os <b>${total} EPIs</b> em <b>${formatTime(g.resultTime)}</b>.${g.newTimeRecord ? ' 🏆 Novo recorde!' : ''}<br>Melhor tempo: <b>${formatTime(bestTime())}</b><br>🪙 <b>+${REWARD} GenesisCoins</b>`;
     } else {
       title = 'Foi quase!';
       info = `Você pegou <b>${n} de ${total}</b> EPIs.<br>Mas EPI é importante.<br><b>Tente novamente!</b>`;
@@ -124,6 +127,11 @@ const Nature = (() => {
     g.phase = 'end'; g.won = won;
     if (won) { addCoins(REWARD); g.coinsEarned = REWARD; Sound.power(); } else Sound.hit();
     if (g.got.size > getBest(g.ch.id)) setBest(g.ch.id, g.got.size);
+    if (won) {
+      g.resultTime = Math.max(1, Math.round(g.elapsed * 1000));
+      g.newTimeRecord = !bestTime() || g.resultTime < bestTime();
+      if (g.newTimeRecord) { try { localStorage.setItem(TIME_KEY, g.resultTime); } catch (e) {} }
+    }
     showOverlay(won ? 'win' : 'lose');
   }
 
@@ -178,6 +186,7 @@ const Nature = (() => {
       if (g.readyT >= 2.4) { g.phase = 'play'; }
       return;
     }
+    g.elapsed += dt;
     g.timeLeft -= dt * clockRate();
     if (g.timeLeft <= 0) { g.timeLeft = 0; finish(false); return; }
 
@@ -351,7 +360,7 @@ const Nature = (() => {
     CHALLENGES, EPIS, load, start, stop, update, draw, togglePause, primary,
     isRunning: () => running,
     restart: () => newGame(g.ch.id),
-    coins: getCoins, best: getBest,
+    coins: getCoins, best: getBest, bestTime, formatTime,
     setDebug: v => { debug = v; }, _walls: () => WALLS, _platforms: () => PLATFORMS, platY,
     _debug: () => g,
   };

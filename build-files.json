@@ -159,12 +159,6 @@
  "fase-teresopolis/nature/epi_mascara.png",
  "fase-teresopolis/nature/epi_oculos.png",
  "fase-teresopolis/nature/epi_protetor.png",
- "fase-teresopolis/nature/hop_h0.jpg",
- "fase-teresopolis/nature/hop_h1.jpg",
- "fase-teresopolis/nature/hop_h2.jpg",
- "fase-teresopolis/nature/hop_h3.jpg",
- "fase-teresopolis/nature/hop_h4.jpg",
- "fase-teresopolis/nature/hop_h5.jpg",
  "fase-teresopolis/nature/m0.jpg",
  "fase-teresopolis/nature/m1.jpg",
  "fase-teresopolis/nature/m2.jpg",
@@ -243,7 +237,6 @@
  "frames/walk6.png",
  "frames/walk7.png",
  "game.js",
- "hop-data.js",
  "hop.js",
  "index.html",
  "map/new-map.png",
@@ -258,5 +251,6 @@
  "style.css",
  "touch.css",
  "touch.js",
+ "updater.js",
  "tower-data.js"
 ]

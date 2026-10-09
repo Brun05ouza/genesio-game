@@ -40,6 +40,15 @@ button,.btn,.card,.icon{touch-action:manipulation}
 #rotate .phone{width:54px;height:92px;border:5px solid #fff;border-radius:12px;animation:rot 2.2s ease-in-out infinite}
 @keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
 @media (orientation:portrait){body.touch #rotate{display:flex}}
+body.hop-choice #rotate,body.hop-vertical #rotate{display:none}
+@media(orientation:landscape){body.touch.hop-vertical #rotate{display:flex}body.hop-vertical #rotate .phone{animation-direction:reverse}}
+#rotateHopMode[hidden]{display:none}
+#touch[data-mode="hopVertical"] .joy-zone{display:none}
+#touch[data-mode="hopVertical"] .tbtn{width:80px;height:64px;border-radius:18px;bottom:max(22px,env(safe-area-inset-bottom));font-size:16px;background:rgba(16,46,32,.88);border-color:#75be91}
+#touch[data-mode="hopVertical"] .b-left{left:max(20px,env(safe-area-inset-left))}
+#touch[data-mode="hopVertical"] .b-right{right:max(20px,env(safe-area-inset-right))}
+body.swap #touch[data-mode="hopVertical"] .btns,body.swap #touch[data-mode="hopVertical"] .tbtn{transform:none}
+body.hop-vertical #hOverlay .btn{min-height:44px;font-size:18px;padding:9px 14px}
 
 /* telas e diálogos compactos em celular deitado */
 @media (max-height:480px){

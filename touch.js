@@ -57,10 +57,13 @@
     atk: { code: 'KeyJ', label: 'Bater', cls: 'b-atk' },
     throw: { code: 'KeyC', label: 'Lançar', cls: 'b-throw', aim: true },
     special: { code: 'KeyF', label: 'Pregos', cls: 'b-special' },
+    left: { code: 'KeyA', label: 'Esquerda', cls: 'b-left' },
+    right: { code: 'KeyD', label: 'Direita', cls: 'b-right' },
   };
   const MODES = {
     walk: { joy: 'xy', buttons: [B.jump, B.run] },                         // lobby, Nature (EPIs e torre)
     hop: { joy: 'x', buttons: [] },                                        // subida infinita: só esquerda/direita
+    hopVertical: { joy: null, buttons: [B.left, B.right] },
     solar: { joy: 'xy', up: .6, buttons: [B.jump, B.atk, B.dodge, B.throw, B.special] },
   };
   const STATE_MODE = { playing: 'walk', nplay: 'walk', kplay: 'walk', hplay: 'hop', splay: 'solar' };
@@ -141,7 +144,8 @@
   function sync() {
     frame++; flushReleases();
     const menuOpen = !!document.querySelector('.screen.active') || (typeof Talk !== 'undefined' && Talk.isActive());   // menu ou conversa aberta              // pausa, resultado, pergunta...
-    const mode = body.classList.contains('touch') && !menuOpen && typeof state !== 'undefined' ? STATE_MODE[state] : null;
+    let mode = body.classList.contains('touch') && !menuOpen && typeof state !== 'undefined' ? STATE_MODE[state] : null;
+    if (mode === 'hop' && Hop.mode === 'vertical') mode = 'hopVertical';
     if (mode !== curMode) {
       if (curMode) { joyEnd(); releaseAll(); touchAim.set = false; root.querySelectorAll('.aim-ring').forEach(r => r.classList.remove('on')); }
       curMode = mode;

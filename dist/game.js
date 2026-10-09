@@ -96,6 +96,7 @@ addEventListener('keydown', e => {
     else if (state === 'splay') Solar.togglePause();
     else if (state === 'fplay') Flow.togglePause();
     else if (state === 'nature') backToMap();
+    else if (state === 'hopMode') openNature();
     else if (state === 'prompt') closePrompt();
     else if (state === 'oasis') backToMap();
     else if (state === 'difficulty') show('oasis');
@@ -129,6 +130,33 @@ function updateCamera(fx, fy) {
   cam.y = Math.min(Math.max(fy, halfH), mapImg.height - halfH);
 }
 
+// Move em pequenos passos: respeita obstáculos finos e desliza sem prender o pé
+// nos cantos da máscara. Se uma posição antiga cair no bloqueio, recupera só o piso próximo.
+function moveOnMap(dx, dy) {
+  const free = walkMask || LEVELS[levelId].free, mx = free ? 4 : 40, myTop = free ? 4 : 85, myBot = free ? 4 : 8;
+  const allowed = (x, y) => x >= mx && y >= myTop && x <= mapImg.width - mx && y <= mapImg.height - myBot && canWalk(x, y) && !gateBlocked(x, y);
+  if (walkMask && !allowed(player.wx, player.wy)) {
+    let found = false;
+    for (let r = 1; r <= 16 && !found; r++) for (let i = 0; i < 32; i++) {
+      const a = i * Math.PI / 16, x = player.wx + Math.cos(a) * r, y = player.wy + Math.sin(a) * r;
+      if (allowed(x, y)) { player.wx = x; player.wy = y; found = true; break; }
+    }
+  }
+  const length = Math.hypot(dx, dy), steps = Math.max(1, Math.ceil(length)), sx = dx / steps, sy = dy / steps;
+  for (let i = 0; i < steps; i++) {
+    const x = player.wx, y = player.wy;
+    if (allowed(x + sx, y + sy)) { player.wx += sx; player.wy += sy; }
+    else if (sx && allowed(x + sx, y)) player.wx += sx;
+    else if (sy && allowed(x, y + sy)) player.wy += sy;
+    else if (levelId === 'teresopolis' && length > 0) {
+      // Um comando reto também pode contornar um pequeno dente, sem atravessar objetos.
+      const choices = [-Math.PI / 4, Math.PI / 4].map(a => ({ x: sx * Math.cos(a) - sy * Math.sin(a), y: sx * Math.sin(a) + sy * Math.cos(a) }));
+      const slide = choices.find(d => allowed(x + d.x, y + d.y) && allowed(x + d.x * 3, y + d.y * 3));
+      if (slide) { player.wx += slide.x; player.wy += slide.y; }
+    }
+  }
+}
+
 function update(dt) {
   let dx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
   let dy = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0);
@@ -138,21 +166,9 @@ function update(dt) {
   if (dx) player.facing = dx;
   if (dx && dy) { dx *= Math.SQRT1_2; dy *= Math.SQRT1_2; }
   const ox = player.wx, oy = player.wy;
-  const free = walkMask || LEVELS[levelId].free;
-  const mx = free ? 4 : 40, myTop = free ? 4 : 85, myBot = free ? 4 : 8;
-  let nx = Math.min(Math.max(ox + dx * spd * dt, mx), mapImg.width - mx);
-  let ny = Math.min(Math.max(oy + dy * spd * dt, myTop), mapImg.height - myBot);
-  if (walkMask && !canWalk(nx, ny)) {       // só pisa em rua/calçada: desliza pelas bordas
-    if (canWalk(nx, oy)) ny = oy;
-    else if (canWalk(ox, ny)) nx = ox;
-    else { nx = ox; ny = oy; }
-  }
-  if (gateBlocked(nx, ny)) {              // desliza pela pedra do portal em vez de atravessar
-    if (!gateBlocked(nx, oy)) ny = oy;
-    else if (!gateBlocked(ox, ny)) nx = ox;
-    else { nx = ox; ny = oy; }
-  }
-  player.wx = nx; player.wy = ny;
+  moveOnMap(dx * spd * dt, dy * spd * dt);
+  player.moving = Math.hypot(player.wx - ox, player.wy - oy) > 0.01;
+  player.running = player.running && player.moving;
   const lvNow = LEVELS[levelId], next = lvNow.next;
   if (next && player.wy >= mapImg.height - 12) goToLevel(next);
   if (lvNow.exitSouth && player.wy > lvNow.exitSouth.y && player.wx > lvNow.exitSouth.x0 && player.wx < lvNow.exitSouth.x1) goToLevel(lvNow.exitSouth.to);
@@ -217,6 +233,8 @@ const SIGNS = [
   { level: 'teresopolis', x: 570, y: 460, text: 'NATURE',            dir: 'up',   w: 76,  ss: 0.68, nature: true },   // rotatória, subindo a rua central
   { level: 'teresopolis', x: 960, y: 860, text: 'SOLAR DO BOSQUE',   dir: 'up',   w: 142, ss: 0.68, solar: true },   // rua principal, à direita do cruzamento
   { level: 'teresopolis', x: 470, y: 850, text: 'FLOW RESIDENCIAL',  dir: 'up',   w: 152, ss: 0.68, flow: true },   // rua da esquerda, perto do arco
+  { level: 'teresopolis', x: 190, y: 720, text: 'PETRÓPOLIS', dir: 'left', w: 156, ss: 0.85, soon: true },
+  { level: 'teresopolis', x: 1260, y: 850, text: 'NOVA FRIBURGO', dir: 'right', w: 156, ss: 0.85, soon: true },
 ];
 // portal de pedra "Teresópolis" na rua de cima do lobby (x/y = centro da base). solid = trechos (fração da largura) onde há pedra no chão
 const GATES = [
@@ -292,6 +310,17 @@ function drawSign(sg) {
   ctx.shadowBlur = 0;
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(bx + 3 * Z, by + 3 * Z, bw - 6 * Z, bh - 6 * Z, 4 * Z); ctx.stroke();
+  if (sg.soon) {
+    const dir = sg.dir === 'left' ? -1 : 1, ax = dir * (bw / 2 - 14 * Z), ay = by + bh / 2;
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 ${10.5 * Z}px 'Fredoka', sans-serif`;
+    ctx.fillText(sg.text, -dir * 8 * Z, by + bh * 0.33);
+    ctx.font = `700 ${9 * Z}px 'Fredoka', sans-serif`; ctx.fillStyle = '#fff3b0';
+    ctx.fillText('EM BREVE', -dir * 8 * Z, by + bh * 0.7);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(ax + dir * 6 * Z, ay);
+    ctx.lineTo(ax - dir * 4 * Z, ay - 7 * Z); ctx.lineTo(ax - dir * 4 * Z, ay + 7 * Z); ctx.closePath(); ctx.fill();
+    ctx.restore(); return;
+  }
   // texto e seta (seta na frente do texto quando aponta para cima, atrás quando aponta para baixo)
   const up = sg.dir === 'up';
   const textY = by + bh * (up ? 0.68 : 0.36);
@@ -322,7 +351,7 @@ function drawPlayer(actor = player) {
     anim = 'idle';
   }
   let img = frames[anim][idx];
-  const outfit = actor !== player && actor.skin !== 'classico' ? Lobby.imageFor(actor) : null;
+  const outfit = actor !== player && actor.game ? Lobby.playingImage() : actor !== player && actor.skin !== 'classico' ? Lobby.imageFor(actor) : null;
   if (outfit?.complete && outfit.naturalWidth) img = outfit;
   const cs = LEVELS[levelId].charScale || 1;     // tamanho do Genésio em relação à fase
   const sc = img === outfit ? 105 * cs / img.height : SCALE[anim] * CHAR_SCALE * cs;
@@ -345,9 +374,15 @@ function drawPlayer(actor = player) {
 }
 
 function resize() {
-  const s = Math.min(innerWidth / VW, innerHeight / VH);
-  canvas.style.width = VW * s + 'px';
-  canvas.style.height = VH * s + 'px';
+  const portrait = document.body.classList.contains('playing') && Hop.isRunning() && Hop.mode === 'vertical';
+  if (portrait) Hop.fitViewport();
+  const width = portrait ? Hop.width : VW, height = portrait ? Hop.height : VH;
+  if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+  const s = Math.min(innerWidth / width, innerHeight / height);
+  canvas.style.width = width * s + 'px';
+  canvas.style.height = height * s + 'px';
+  $('rotateText').textContent = document.body.classList.contains('hop-vertical') ? 'Gire o aparelho para jogar na vertical' : 'Gire o aparelho para jogar na horizontal';
+  $('rotateHopMode').hidden = !Hop.isRunning();
   // ampliação em escala fracionária fica mais nítida suavizada; só em escala inteira mantém os pixels "duros"
   canvas.style.imageRendering = Math.abs(s - Math.round(s)) < .01 ? 'pixelated' : 'auto';
   // menus, diálogos e botões crescem junto com o monitor (1.0 até 2.2x), para não ficarem miúdos em telas grandes
@@ -358,29 +393,29 @@ addEventListener('resize', resize); resize();
 let last = performance.now(), demoT = 0;
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05); last = now;
-  ctx.clearRect(0, 0, VW, VH);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (ready) {
     Lobby.update(dt);
     if (state === 'runner') {
-      Runner.update(dt);
+      if (!Updater.isBlocking()) Runner.update(dt);
       Runner.draw(ctx);
     } else if (state === 'nplay') {
-      Nature.update(dt);
+      if (!Updater.isBlocking()) Nature.update(dt);
       Nature.draw(ctx);
     } else if (state === 'kplay') {
-      Climb.update(dt);
+      if (!Updater.isBlocking()) Climb.update(dt);
       Climb.draw(ctx);
     } else if (state === 'hplay') {
-      Hop.update(dt);
+      if (!Updater.isBlocking()) Hop.update(dt);
       Hop.draw(ctx);
     } else if (state === 'splay') {
-      Solar.update(dt);
+      if (!Updater.isBlocking()) Solar.update(dt);
       Solar.draw(ctx);
     } else if (state === 'fplay') {
-      Flow.update(dt);
+      if (!Updater.isBlocking()) Flow.update(dt);
       Flow.draw(ctx);
     } else if (state === 'playing' || state === 'prompt' || state === 'talk') {
-      if (state === 'playing') { update(dt); checkOasisSign(); if (typeof Ranking !== 'undefined') Ranking.check(player, levelId); }
+      if (state === 'playing' && !Updater.isBlocking()) { update(dt); checkOasisSign(); if (typeof Ranking !== 'undefined') Ranking.check(player, levelId); }
       if (talkFocus && state === 'talk') {                       // conversa mostrando um lugar: a câmera desliza até ele
         talkCam.x += (talkFocus.x - talkCam.x) * Math.min(1, dt * 3.2); talkCam.y += (talkFocus.y - talkCam.y) * Math.min(1, dt * 3.2);
       } else { talkCam.x += (player.wx - talkCam.x) * Math.min(1, dt * 6); talkCam.y += (player.wy - talkCam.y) * Math.min(1, dt * 6); if (state !== 'talk') { talkCam.x = player.wx; talkCam.y = player.wy; } }
@@ -413,8 +448,9 @@ function show(name) {
   if (name !== 'talk' && typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip();      // saiu da conversa por outro caminho (menu, etc.)
   state = name;
   document.body.classList.toggle('on-login', name === 'login' || name === 'profile');
+  document.body.classList.toggle('hop-choice', name === 'hopMode');
   if (typeof refreshProfileCard === 'function') refreshProfileCard();
-  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'solarDifficulty', 'nature', 'serra', 'iguacu', 'lvload', 'login', 'profile', 'ranking']) $(id).classList.toggle('active', id === name);
+  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'solarDifficulty', 'nature', 'hopMode', 'serra', 'iguacu', 'lvload', 'login', 'profile', 'ranking']) $(id).classList.toggle('active', id === name);
   if (name !== 'runner') $('rOverlay').classList.remove('active');
   if (name !== 'nplay') $('nOverlay').classList.remove('active');
   if (name !== 'kplay') $('kOverlay').classList.remove('active');
@@ -422,6 +458,7 @@ function show(name) {
   if (name !== 'splay') $('sOverlay').classList.remove('active');
   if (name !== 'fplay') $('fOverlay').classList.remove('active');
   document.body.classList.toggle('playing', name === 'playing' || name === 'runner' || name === 'nplay' || name === 'kplay' || name === 'hplay' || name === 'splay' || name === 'fplay');
+  resize();
   if (name === 'menu') { $('btnStart').textContent = started ? 'Continuar' : 'Começar'; $('menu').classList.toggle('started', started); }
 }
 // conversa de boas-vindas (só quando começa um jogo novo; "Continuar" volta direto)
@@ -784,14 +821,38 @@ function openNature() {
   $('natCoins').textContent = Nature.coins();
   $('natBest-hop').textContent = Hop.best() ? `Recorde: ${Hop.best()} pts` : 'Sem recorde';
   $('natBest-climb').textContent = Climb.best() ? `Recorde: ${Climb.best()} m` : 'Sem recorde';
-  for (const c of Nature.CHALLENGES) { const b = $('natBest-' + c.id); if (b) b.textContent = Nature.best(c.id) ? `Melhor: ${Nature.best(c.id)}/${Nature.EPIS.length}` : 'Sem recorde'; }
+  for (const c of Nature.CHALLENGES) { const b = $('natBest-' + c.id); if (b) b.textContent = Nature.bestTime() ? `Melhor tempo: ${Nature.formatTime(Nature.bestTime())}` : 'Conclua para marcar seu tempo'; }
   show('nature');
 }
 async function beginChallenge(id) {
   const mod = id === 'climb' ? Climb : id === 'hop' ? Hop : Nature;
-  await loadWithScreen('Nature', () => mod.start(id), () => show(id === 'climb' ? 'kplay' : id === 'hop' ? 'hplay' : 'nplay'), () => show('nature'));
+  await loadWithScreen('Nature', () => mod.start(id), () => show(id === 'climb' ? 'kplay' : id === 'hop' ? 'hplay' : 'nplay'), () => {
+    if (id === 'hop') { Hop.stop(); openHopMode(); } else show('nature');
+  });
 }
-document.querySelectorAll('[data-challenge]').forEach(b => b.addEventListener('click', () => { Sound.init(); Sound.click(); b.blur(); beginChallenge(b.dataset.challenge); }));
+function openHopMode() {
+  for (const k in keys) keys[k] = false;
+  show('hopMode'); $('hopHorizontal').focus({ preventScroll: true });
+}
+document.querySelectorAll('[data-challenge]').forEach(b => b.addEventListener('click', () => { Sound.init(); Sound.click(); b.blur(); b.dataset.challenge === 'hop' ? openHopMode() : beginChallenge(b.dataset.challenge); }));
+document.querySelectorAll('[data-hop-mode]').forEach(b => click(b.id, async () => {
+  const buttons = document.querySelectorAll('[data-hop-mode], #hopModeBack');
+  buttons.forEach(button => button.disabled = true);
+  try {
+    Hop.setMode(b.dataset.hopMode);
+    // Chamar antes de qualquer carregamento preserva o gesto necessário à permissão no iPhone.
+    if (Hop.mode === 'vertical') await Hop.enableTilt();
+    await beginChallenge('hop');
+  } finally { buttons.forEach(button => button.disabled = false); }
+}));
+click('hopModeBack', openNature);
+click('hMode', () => { Hop.stop(); openHopMode(); });
+click('rotateHopMode', () => { Hop.stop(); openHopMode(); });
+click('hCalibrate', async () => {
+  await Hop.enableTilt();
+  $('hTiltInfo').textContent = ['denied', 'unavailable'].includes(Hop.tiltStatus)
+    ? 'Inclinação indisponível. Continue usando as setas de toque.' : 'Ao continuar, segure confortável: essa será a posição central.';
+});
 click('btnNatureBack', backToMap);
 click('nPrimary', () => Nature.primary());
 click('nChallenges', () => { Nature.stop(); openNature(); });

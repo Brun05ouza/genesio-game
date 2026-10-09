@@ -5,6 +5,8 @@ const URL = process.argv[2] || 'http://localhost:8010';
 (async () => {
   const b = await chromium.launch({ headless: true, channel: 'msedge' }); const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
   await p.goto(URL); await p.waitForFunction(() => ready);
+  await p.waitForFunction(() => ['login', 'menu'].includes(state));
+  if (await p.evaluate(() => state === 'login')) await p.click('#acGuest');
   const r = {};
   for (const x of [627, 580, 680]) {
     await p.evaluate(x => { show('playing'); levelId = 'praca'; player.wx = x; player.wy = 300; }, x);

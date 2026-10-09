@@ -4,17 +4,7 @@
   const isStandalone = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
   if (isStandalone()) body.classList.add('app');
 
-  // service worker (não em localhost, para não atrapalhar o desenvolvimento; use ?sw=1 para testar)
-  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-  if ('serviceWorker' in navigator && (!local || /[?&]sw=1/.test(location.search))) {
-    const hadController = !!navigator.serviceWorker.controller;
-    let reloaded = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {          // versão nova publicada: recarrega uma vez
-      if (!hadController || reloaded) return;
-      reloaded = true; location.reload();
-    });
-    addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {}));
-  }
+  Updater.init();
 
   // instalar
   const bar = document.getElementById('installBar'), btnBar = document.getElementById('installGo'), btnX = document.getElementById('installX'), icon = document.getElementById('btnInstall');

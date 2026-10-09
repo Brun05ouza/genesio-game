@@ -3,10 +3,13 @@ const Lobby = (() => {
   const button = document.getElementById('lobbyOnline'), label = document.getElementById('lobbyOnlineLabel');
   const offlineButton = document.getElementById('btnOffline');
   const peers = new Map(), pictures = new Map();
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let ws = null, token = null, selfId = null, status = 'offline', enabled = true, retryAt = 0, failures = 0, blockedToken = null, fullUntil = 0;
   let lastPacket = '', lastSent = 0, now = 0, count = 0;
   try { enabled = localStorage.getItem('genesio-lobby-online') !== '0'; } catch (e) {}
   const mapVisible = () => ['playing', 'prompt', 'talk'].includes(state) && !document.hidden;
+  const GAME_NAMES = { oasis: 'Oásis Residencial', epi: 'Nature · EPIs', climb: 'Nature · Torre', hop: 'Nature · Subida infinita', solar: 'Solar do Bosque', flow: 'Flow Residencial' };
+  const activeGame = () => Runner.isRunning() ? 'oasis' : Nature.isRunning() ? 'epi' : Climb.isRunning() ? 'climb' : Hop.isRunning() ? 'hop' : Solar.isRunning() ? 'solar' : Flow.isRunning() ? 'flow' : null;
   function endpoint() {
     const url = new URL((window.GENESIO_API || '/api').replace(/\/$/, '') + '/lobby', location.href);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'; return url.href;
@@ -34,7 +37,7 @@ const Lobby = (() => {
             if (p.id === selfId || ![p.x, p.y, p.z].every(Number.isFinite)) continue;
             seen.add(p.id);
             const old = peers.get(p.id);
-            if (old && old.level === p.level) { old.target = p; old.name = p.name; old.avatar = p.avatar; old.skin = p.skin; old.facing = p.facing; old.moving = p.moving; old.running = p.running; old.vz = p.vz; }
+            if (old && old.level === p.level) { old.target = p; old.name = p.name; old.avatar = p.avatar; old.skin = p.skin; old.game = GAME_NAMES[p.game] ? p.game : null; old.facing = p.facing; old.moving = p.moving; old.running = p.running; old.vz = p.vz; }
             else peers.set(p.id, { ...p, wx: p.x, wy: p.y, z: p.z, t: 0, target: p });
           }
           for (const id of peers.keys()) if (!seen.has(id)) peers.delete(id);
@@ -53,8 +56,8 @@ const Lobby = (() => {
   }
   function sendState(force = false) {
     if (!ws || ws.readyState !== WebSocket.OPEN || selfId === null) return;
-    const visible = mapVisible() && now >= fullUntil;
-    const packet = JSON.stringify({ type: 'state', level: levelId, visible, x: player.wx, y: player.wy, z: player.z, vz: player.vz, facing: player.facing, moving: visible && state === 'playing' && player.moving, running: visible && state === 'playing' && !!player.running });
+    const game = activeGame(), visible = (mapVisible() || !!game) && now >= fullUntil;
+    const packet = JSON.stringify({ type: 'state', level: levelId, visible, game, x: player.wx, y: player.wy, z: game ? 0 : player.z, vz: game ? 0 : player.vz, facing: player.facing, moving: !game && visible && state === 'playing' && player.moving, running: !game && visible && state === 'playing' && !!player.running });
     if (force || now - lastSent >= 100 && (packet !== lastPacket || now - lastSent >= 5000)) {
       if (ws.bufferedAmount < 8192) { ws.send(packet); lastPacket = packet; lastSent = now; }
     }
@@ -95,6 +98,11 @@ const Lobby = (() => {
     if (!pictures.has(src)) { const image = new Image(); image.src = src; pictures.set(src, image); }
     return pictures.get(src);
   }
+  function playingImage() {
+    for (const src of ['assets/jogando-1.webp', 'assets/jogando-2.webp']) if (!pictures.has(src)) { const image = new Image(); image.src = src; pictures.set(src, image); }
+    const src = !reducedMotion.matches && Math.floor(performance.now() / 350) % 2 ? 'assets/jogando-2.webp' : 'assets/jogando-1.webp';
+    return pictures.get(src);
+  }
   function drawName(p, x, y, scale) {
     const name = String(p.name || 'Jogador').slice(0, 20), img = imageFor(p);
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "700 15px 'Fredoka',sans-serif";
@@ -102,7 +110,14 @@ const Lobby = (() => {
     ctx.fillStyle = 'rgba(8,40,26,.95)'; ctx.strokeStyle = '#5cc494'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.roundRect(x - w / 2, top, w, 28, 9); ctx.fill(); ctx.stroke();
     if (img.complete && img.naturalWidth) ctx.drawImage(img, x - w / 2 + 5, top + 2, 24, 24);
-    ctx.fillStyle = '#fff'; ctx.fillText(name, x + 11, top + 14); ctx.restore();
+    ctx.fillStyle = '#fff'; ctx.fillText(name, x + 11, top + 14);
+    if (GAME_NAMES[p.game]) {
+      const text = GAME_NAMES[p.game]; ctx.font = "700 14px 'Fredoka',sans-serif";
+      const width = ctx.measureText(text).width + 24;
+      ctx.fillStyle = '#ffcf54'; ctx.beginPath(); ctx.roundRect(x - width / 2, top - 27, width, 23, 8); ctx.fill();
+      ctx.fillStyle = '#18321e'; ctx.fillText(text, x, top - 15);
+    }
+    ctx.restore();
   }
   function drawPeer(p) { drawPlayer(p); }
   function actors() { return status === 'online' && mapVisible() ? [...peers.values()].filter(p => p.level === levelId).map(p => ({ y: p.wy, draw: () => drawPeer(p) })) : []; }
@@ -123,5 +138,5 @@ const Lobby = (() => {
   addEventListener('visibilitychange', () => { now = performance.now(); sendState(true); });
   addEventListener('online', () => { retryAt = 0; });
   addEventListener('pagehide', disconnect);
-  return { update, actors, drawName, imageFor, setEnabled, isEnabled: () => enabled, _debug: () => ({ status, selfId, count, peers: [...peers.values()], enabled }) };
+  return { update, actors, drawName, imageFor, playingImage, setEnabled, isEnabled: () => enabled, _debug: () => ({ status, selfId, count, peers: [...peers.values()], enabled }) };
 })();

@@ -96,6 +96,25 @@ body.playing .hud{display:block}
 #desert.serra #desertText{text-shadow:0 2px 0 #15402a}
 
 /* Nature */
+#hopMode{box-sizing:border-box;padding:24px;overflow-y:auto;background:linear-gradient(rgba(6,30,18,.7),rgba(6,30,18,.9)),url('fase-teresopolis/nature/hop-background.webp') center/cover}
+.hop-mode-content{width:min(760px,100%);text-align:center;margin:auto}
+#hopMode h1{font-size:clamp(28px,4vw,44px);line-height:1.1;color:#fff3b0;margin:0 0 12px;text-wrap:balance}
+.hop-mode-intro{font-size:18px;line-height:1.4;margin:0 0 24px;color:#e2f5e8;text-wrap:balance}
+.hop-modes{display:flex;gap:20px;text-align:left}
+.hop-mode{flex:1;min-width:0;cursor:pointer;border:2px solid #75be91;border-radius:16px;background:#102e20;color:#fff;font-family:inherit;padding:20px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;box-shadow:0 8px 18px rgba(0,0,0,.28)}
+.hop-mode svg{width:56px;height:56px;fill:none;stroke:#f2b632;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.hop-mode b{font-size:26px;color:#fff3b0}
+.hop-mode span{font-size:18px;line-height:1.4}
+.hop-mode small{font-size:16px;line-height:1.4;color:#bce5cc;margin-top:auto}
+.hop-mode:hover{background:#19482f;border-color:#fff3b0}
+.hop-mode:focus-visible,#hopMode .btn:focus-visible{outline:3px solid #fff3b0;outline-offset:5px}
+.hop-mode:disabled{opacity:.6;cursor:wait}
+.hop-mode-note{margin:22px auto 18px;max-width:58ch;font-size:16px;line-height:1.4;color:#bce5cc;text-wrap:balance}
+#hopMode .btn{min-height:44px}
+#hOverlay .dialog{box-sizing:border-box;max-width:90vw;max-height:92dvh;overflow-y:auto}
+#hOverlay #hTiltInfo{font-size:16px;line-height:1.4;color:#d9ffb0}
+@media(max-width:560px){#hopMode{padding:24px 18px}.hop-modes{flex-direction:column;gap:14px}.hop-mode{position:relative;padding:18px 18px 18px 78px;gap:6px}.hop-mode svg{position:absolute;left:14px;top:18px;width:48px;height:48px}.hop-mode b{font-size:24px}.hop-mode span{font-size:16px}.hop-mode small{font-size:16px}.hop-mode-intro{font-size:16px;margin-bottom:20px}}
+@media(max-height:480px){#hopMode{padding:16px}.hop-mode-content{max-width:700px}#hopMode h1{font-size:28px;margin-bottom:6px}.hop-mode-intro{font-size:16px;margin-bottom:12px}.hop-mode{gap:5px;padding:12px 16px}.hop-mode svg{width:36px;height:36px}.hop-mode b{font-size:22px}.hop-mode span,.hop-mode small{font-size:16px}.hop-mode-note{margin:12px auto;font-size:14px}}
 .natstage{background:linear-gradient(rgba(6,30,18,.55),rgba(6,30,18,.82)),url("fase-teresopolis/nature/card1.webp") center/cover no-repeat}
 .natstage .logo{color:#d9ffb0;text-shadow:0 5px 0 #2f8f4a,0 10px 0 #15402a,0 16px 24px rgba(0,0,0,.5)}
 .cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:min(1100px,94vw)}
@@ -147,6 +166,19 @@ p.small{font-size:15px;opacity:.85;margin:0}
 #lvload.err #lvText{color:#ffb0a0}
 
 /* ===== app instalável ===== */
+#updateOverlay{position:fixed;z-index:40;box-sizing:border-box;padding:max(24px,env(safe-area-inset-top)) 24px;background:#0b2418;overflow-y:auto}
+#updateOverlay[hidden],#updateGo[hidden],#updateSpinner[hidden]{display:none}
+.update-content{width:min(520px,100%);text-align:center;margin:auto;zoom:1!important}
+#updateTitle{margin:0 0 18px;font-size:clamp(30px,5vw,42px);line-height:1.1;color:#fff3b0;text-wrap:balance}
+#updateText{margin:0 0 18px;font-size:20px;line-height:1.45;color:#fff;text-wrap:balance}
+#updateStatus{margin:0 0 28px;font-size:16px;line-height:1.45;color:#bce5cc;text-wrap:balance}
+#updateGo{min-height:48px;font-size:22px;max-width:100%}
+#updateGo:focus-visible{outline:3px solid #fff3b0;outline-offset:5px}
+#updateSpinner{width:56px;height:56px;fill:none;stroke:#f2b632;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;margin:0 auto 20px;animation:updateSpin 1.2s linear infinite}
+#updateSpinner svg{display:block;width:100%;height:100%}
+@keyframes updateSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#updateSpinner{animation:none}}
+@media(max-height:480px){#updateOverlay{padding:18px}#updateTitle{font-size:30px;margin-bottom:12px}#updateText{font-size:18px;margin-bottom:12px}#updateStatus{margin-bottom:18px}#updateSpinner{width:40px;height:40px;margin-bottom:12px}}
 #installBar,#errBar{position:fixed;width:max-content;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:12px;max-width:min(92vw,720px);padding:10px 14px;border-radius:14px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink),0 10px 24px rgba(0,0,0,.4);color:#fff;font:600 15px/1.25 'Fredoka',sans-serif;pointer-events:auto}
 #installBar{top:max(10px,env(safe-area-inset-top));background:rgba(8,40,26,.96)}
 #errBar{bottom:max(10px,env(safe-area-inset-bottom));background:rgba(90,22,16,.96)}

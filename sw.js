@@ -3,13 +3,30 @@
 const VERSION = 'dev';
 const CORE = [];
 const CACHE = 'genesio-' + VERSION;
+const notify = async data => {
+  for (const client of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) client.postMessage({ ...data, version: VERSION });
+};
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
-    await Promise.allSettled(CORE.map(u => c.add(new Request(u, { cache: 'reload' }))));
+    let done = 0;
+    const results = await Promise.allSettled(CORE.map(async u => {
+      await c.add(new Request(u, { cache: 'reload' }));
+      await notify({ type: 'UPDATE_PROGRESS', done: ++done, total: CORE.length });
+    }));
+    if (results.some(result => result.status === 'rejected')) {
+      await caches.delete(CACHE); await notify({ type: 'UPDATE_ERROR' });
+      throw Error('Não foi possível preparar todos os arquivos do jogo');
+    }
+    // Mantém a migração dos clientes antigos, que só conhecem controllerchange.
     await self.skipWaiting();
   })());
+});
+
+self.addEventListener('message', e => {
+  if (e.data?.type === 'GET_VERSION') e.ports[0]?.postMessage({ version: VERSION });
+  if (e.data?.type === 'SKIP_WAITING') e.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
@@ -22,6 +39,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || req.headers.has('range')) return;
   const url = new URL(req.url);
+  if (url.pathname.endsWith('/version.json')) return; // consulta sempre a versão publicada, sem cache offline
   if (url.pathname.startsWith('/api/')) return; // contas e presença precisam de dados atuais, nunca do cache offline
   const font = /(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname);
   if (url.origin !== location.origin && !font) return;

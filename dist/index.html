@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
+<meta name="genesio-version" content="82761c40ce">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,10 +16,10 @@
 <title>Genésio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=bfa1d3bf1c">
-<link rel="stylesheet" href="menu.css?v=bfa1d3bf1c">
-<link rel="stylesheet" href="settings.css?v=bfa1d3bf1c">
-<link rel="stylesheet" href="touch.css?v=bfa1d3bf1c">
+<link rel="stylesheet" href="style.css?v=82761c40ce">
+<link rel="stylesheet" href="menu.css?v=82761c40ce">
+<link rel="stylesheet" href="settings.css?v=82761c40ce">
+<link rel="stylesheet" href="touch.css?v=82761c40ce">
 </head>
 <body>
 <canvas id="c" width="1280" height="720"></canvas>
@@ -291,11 +292,30 @@
       </button>
       <button class="card" data-challenge="hop">
         <img src="fase-teresopolis/nature/card3.webp" alt="">
-        <b>Desafio 3</b><span>Subida infinita</span><small>pule sozinho · só A/D · <em id="natBest-hop"></em></small>
+        <b>Desafio 3</b><span>Subida infinita</span><small>pule sozinho · toque ou inclinação · <em id="natBest-hop"></em></small>
       </button>
       <div class="card locked"><img src="fase-teresopolis/nature/card4.webp" alt=""><b>Desafio 4</b><span>Em breve</span><small>🔒</small></div>
     </div>
     <button id="btnNatureBack" class="btn">Voltar</button>
+  </section>
+
+  <section id="hopMode" class="screen natstage" aria-labelledby="hopModeTitle">
+    <div class="hop-mode-content">
+      <h1 id="hopModeTitle">Subida infinita</h1>
+      <p class="hop-mode-intro">O Genésio pula sozinho. Escolha como controlar os lados.</p>
+      <div class="hop-modes">
+        <button id="hopHorizontal" class="hop-mode" data-hop-mode="horizontal">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="17" width="52" height="30" rx="5"/><path d="M13 26v12M51 30v4"/></svg>
+          <b>Horizontal</b><span>Celular deitado. Mova pelo joystick de toque ou pelas teclas A/D e setas.</span><small>Mais espaço para os lados.</small>
+        </button>
+        <button id="hopVertical" class="hop-mode" data-hop-mode="vertical">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="17" y="6" width="30" height="52" rx="5"/><path d="M26 13h12M30 51h4M8 23l-4 9 4 9M56 23l4 9-4 9"/></svg>
+          <b>Vertical</b><span>Celular em pé. Incline para a esquerda ou direita para mover o Genésio.</span><small>Mais visão da subida. Setas de toque também disponíveis.</small>
+        </button>
+      </div>
+      <p class="hop-mode-note">Na vertical, segure o celular numa posição confortável ao começar. Se for solicitado, permita o acesso ao movimento.</p>
+      <button id="hopModeBack" class="btn small">Voltar aos desafios</button>
+    </div>
   </section>
 
   <!-- Nature: torre (pausa / resultado com conversão de moedas) -->
@@ -325,9 +345,12 @@
     <div class="panel dialog">
       <h2 id="hTitle">Pausado</h2>
       <p id="hInfo"></p>
+      <p id="hTiltInfo" hidden></p>
       <div class="dialog-btns col">
         <button id="hPrimary" class="btn primary">Continuar</button>
         <button id="hSettings" class="btn" data-pause-settings hidden>Configurações</button>
+        <button id="hCalibrate" class="btn" hidden>Recalibrar inclinação</button>
+        <button id="hMode" class="btn">Trocar modo</button>
         <button id="hChallenges" class="btn">Escolher desafio</button>
         <button id="hExit" class="btn">Sair para Teresópolis</button>
       </div>
@@ -449,28 +472,38 @@
   <button id="btnPause" class="icon hud" title="Menu (Esc)">☰</button>
 </div>
 
-<div id="rotate"><div class="phone"></div>Gire o aparelho para jogar na horizontal</div>
+<div id="rotate"><div class="phone"></div><span id="rotateText">Gire o aparelho para jogar na horizontal</span><button id="rotateHopMode" class="btn small" hidden>Trocar modo</button></div>
 
-<script src="audio.js?v=bfa1d3bf1c"></script>
-<script src="loader.js?v=bfa1d3bf1c"></script>
-<script src="runner.js?v=bfa1d3bf1c"></script>
-<script src="nature.js?v=bfa1d3bf1c"></script>
-<script src="tower-data.js?v=bfa1d3bf1c"></script>
-<script src="climb.js?v=bfa1d3bf1c"></script>
-<script src="hop-data.js?v=bfa1d3bf1c"></script>
-<script src="hop.js?v=bfa1d3bf1c"></script>
-<script src="solar-data.js?v=bfa1d3bf1c"></script>
-<script src="solar.js?v=bfa1d3bf1c"></script>
-<script src="flow-data.js?v=bfa1d3bf1c"></script>
-<script src="flow.js?v=bfa1d3bf1c"></script>
-<script src="talk.js?v=bfa1d3bf1c"></script>
-<script src="account.js?v=bfa1d3bf1c"></script>
-<script src="ranking.js?v=bfa1d3bf1c"></script>
-<script src="lobby.js?v=bfa1d3bf1c"></script>
-<script src="game.js?v=bfa1d3bf1c"></script>
-<script src="menu.js?v=bfa1d3bf1c"></script>
-<script src="settings.js?v=bfa1d3bf1c"></script>
-<script src="touch.js?v=bfa1d3bf1c"></script>
-<script src="pwa.js?v=bfa1d3bf1c"></script>
+<section id="updateOverlay" class="screen" role="dialog" aria-modal="true" aria-labelledby="updateTitle" aria-describedby="updateText updateStatus" hidden>
+  <div class="update-content">
+    <div id="updateSpinner" aria-hidden="true" hidden><svg viewBox="0 0 48 48"><path d="M38 17a16 16 0 1 0 1 13M38 7v10H28"/></svg></div>
+    <h1 id="updateTitle">Nova versão disponível</h1>
+    <p id="updateText" role="status" aria-live="polite">Atualize para continuar jogando.</p>
+    <p id="updateStatus"></p>
+    <button id="updateGo" class="btn primary">Atualizar agora</button>
+  </div>
+</section>
+
+<script src="audio.js?v=82761c40ce"></script>
+<script src="loader.js?v=82761c40ce"></script>
+<script src="runner.js?v=82761c40ce"></script>
+<script src="nature.js?v=82761c40ce"></script>
+<script src="tower-data.js?v=82761c40ce"></script>
+<script src="climb.js?v=82761c40ce"></script>
+<script src="hop.js?v=82761c40ce"></script>
+<script src="solar-data.js?v=82761c40ce"></script>
+<script src="solar.js?v=82761c40ce"></script>
+<script src="flow-data.js?v=82761c40ce"></script>
+<script src="flow.js?v=82761c40ce"></script>
+<script src="talk.js?v=82761c40ce"></script>
+<script src="account.js?v=82761c40ce"></script>
+<script src="ranking.js?v=82761c40ce"></script>
+<script src="lobby.js?v=82761c40ce"></script>
+<script src="updater.js?v=82761c40ce"></script>
+<script src="game.js?v=82761c40ce"></script>
+<script src="menu.js?v=82761c40ce"></script>
+<script src="settings.js?v=82761c40ce"></script>
+<script src="touch.js?v=82761c40ce"></script>
+<script src="pwa.js?v=82761c40ce"></script>
 </body>
 </html>

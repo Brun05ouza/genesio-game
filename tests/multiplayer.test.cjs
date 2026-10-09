@@ -34,18 +34,30 @@ const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
     // Perfil vem da conta no servidor e muda ao salvar.
     await p1.evaluate(name => Account.updateProfile({ name, avatar: 'd' }), names[0] + 'x');
     await p2.waitForFunction(name => Lobby._debug().peers[0]?.name === name && Lobby._debug().peers[0]?.avatar === 'd', names[0] + 'x');
-    // Cada fase é individual. Ao voltar para o mapa, a presença reaparece.
+    // Cada fase é individual; o jogador permanece no mapa com a imagem de quem está jogando.
     await p1.evaluate(() => openSolarDifficulty()); await p2.waitForFunction(() => Lobby._debug().peers.length === 0);
     await p1.click('#solarDiff-facil'); await p1.waitForFunction(() => state === 'splay');
+    await p2.waitForFunction(() => Lobby._debug().peers[0]?.game === 'solar');
+    await p2.waitForFunction(() => Lobby.playingImage().complete && Lobby.playingImage().naturalWidth > 0);
+    const firstImage = await p2.evaluate(() => Lobby.playingImage().src);
+    await p2.waitForFunction(src => Lobby.playingImage().src !== src && Lobby.playingImage().complete && Lobby.playingImage().naturalWidth > 0, firstImage);
+    await p2.screenshot({ path: path.join(out, 'multiplayer-jogando-mobile.png') });
     assert.equal(await p2.evaluate(() => state === 'playing' && !Solar.isRunning()), true);
     await p1.click('#btnPause'); await p1.click('#sSettings');
+    assert.equal(await p2.evaluate(() => Lobby._debug().peers[0]?.game), 'solar');
     await p1.click('#btnOffline');
     assert.equal(await p1.locator('#btnOffline').getAttribute('aria-pressed'), 'true');
     await p1.screenshot({ path: path.join(out, 'offline-settings-desktop.png') });
     await p1.click('#btnOffline'); await p1.click('#btnBack');
     assert.equal(await p1.evaluate(() => state === 'splay' && Solar._debug().paused), true);
     await p1.click('#sExit');
-    await p2.waitForFunction(() => Lobby._debug().peers.length === 1);
+    await p2.waitForFunction(() => Lobby._debug().peers.length === 1 && !Lobby._debug().peers[0].game);
+    for (const [mod, game, screen, arg] of [['Runner', 'oasis', 'runner', 'facil'], ['Nature', 'epi', 'nplay', 'epi'], ['Climb', 'climb', 'kplay'], ['Hop', 'hop', 'hplay'], ['Flow', 'flow', 'fplay']]) {
+      await p1.evaluate(async ({ mod, screen, arg }) => { await ({ Runner, Nature, Climb, Hop, Flow }[mod]).start(arg); show(screen); }, { mod, screen, arg });
+      await p2.waitForFunction(game => Lobby._debug().peers[0]?.game === game, game);
+      await p1.evaluate(mod => { ({ Runner, Nature, Climb, Hop, Flow }[mod]).stop(); show('playing'); }, mod);
+      await p2.waitForFunction(() => !Lobby._debug().peers[0]?.game && Lobby._debug().peers.length === 1);
+    }
     // Isolamento entre mapas, seguido de reencontro em Teresópolis.
     await p1.evaluate(() => goToLevel('teresopolis')); await p2.waitForFunction(() => Lobby._debug().peers.length === 0);
     await p2.evaluate(() => goToLevel('teresopolis'));
@@ -88,15 +100,31 @@ const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
     const response = await fetch(URL + '/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Probe' + suffix, password: 'teste123' }) });
     const account = await response.json(); assert.equal(response.status, 201);
     await new Promise((resolve, reject) => {
-      const ws = new WS(socketURL), timeout = setTimeout(() => { ws.terminate(); reject(new Error('snapshot não recebido')); }, 5000);
+      const ws = new WS(socketURL), timeout = setTimeout(() => { ws.terminate(); reject(new Error('snapshot não recebido')); }, 25000);
+      let stage = 'position', checkTimer = null;
       ws.on('error', reject);
       ws.on('open', () => ws.send(JSON.stringify({ type: 'hello', token: account.token })));
       ws.on('message', raw => {
         const m = JSON.parse(raw);
         if (m.type === 'welcome') ws.send(JSON.stringify({ type: 'state', level: 'praca', visible: true, x: 999999, y: -100, z: 999, vz: 0, name: 'Forjado', avatar: 'd' }));
         if (m.type === 'snapshot') {
-          try { const p = m.players.find(p => p.id === m.players[0].id); assert.equal(p.name, account.profile.name); assert.equal(p.avatar, 'a'); assert.deepEqual([p.x, p.y, p.z], [1254, 0, 160]); clearTimeout(timeout); ws.close(); resolve(); }
-          catch (e) { clearTimeout(timeout); ws.terminate(); reject(e); }
+          try {
+            const p = m.players.find(p => p.name === account.profile.name);
+            if (stage === 'position') {
+              assert.equal(p.avatar, 'a'); assert.deepEqual([p.x, p.y, p.z], [1254, 0, 160]);
+              stage = 'game'; ws.send(JSON.stringify({ type: 'state', level: 'praca', visible: true, game: 'hop', x: 627, y: 780, z: 99, vz: 99, moving: true, running: true }));
+            } else if (stage === 'game' && p?.game === 'hop') {
+              assert.deepEqual([p.z, p.vz, p.moving, p.running], [0, 0, false, false]); stage = 'waiting';
+              // Sem novos movimentos/heartbeats da página por mais de 15 s, o marcador da fase permanece.
+              checkTimer = setTimeout(async () => {
+                stage = 'check';
+                try { await fetch(URL + '/api/me', { headers: { Authorization: 'Bearer ' + account.token } }); }
+                catch (e) { clearTimeout(timeout); ws.terminate(); reject(e); }
+              }, 16000);
+            } else if (stage === 'check') {
+              assert.equal(p?.game, 'hop'); clearTimeout(timeout); ws.close(); resolve();
+            }
+          } catch (e) { clearTimeout(timeout); clearTimeout(checkTimer); ws.terminate(); reject(e); }
         }
       });
     });

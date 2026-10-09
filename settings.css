@@ -50,3 +50,20 @@
 .touch .srow .lbl{font-size:1.75cqw}
 .touch .srow .sbtn{font-size:1.55cqw;padding:.32cqw 1.3cqw}
 .touch .srow .icon{width:2.35cqw;height:2.35cqw}
+
+/* Configurações acessíveis sem girar o aparelho no modo vertical da subida. */
+@media(orientation:portrait){
+  body.hop-vertical #settings .sstage{width:100%;height:100%;aspect-ratio:auto;background:linear-gradient(rgba(6,30,18,.75),rgba(6,30,18,.9)),url('fase-teresopolis/nature/hop-background.png') center/cover}
+  body.hop-vertical #settings .sbg,body.hop-vertical #settings #sfx,body.hop-vertical #settings .sglcv,body.hop-vertical #settings .ssun,body.hop-vertical #settings .srays{display:none}
+  body.hop-vertical #settings .sstage::before{content:'Configurações';position:absolute;top:14%;left:5%;width:90%;text-align:center;font-size:30px;font-weight:700;color:#fff3b0}
+  body.hop-vertical #settings .spanel{left:5%;top:26%;width:90%;height:min(360px,50dvh);border-radius:16px}
+  body.hop-vertical #settings .srow .lbl{left:6%;font-size:18px}
+  body.hop-vertical #settings .srow input[type=range]{left:35%;width:42%;height:44px}
+  body.hop-vertical #settings .srow input[type=range]::-webkit-slider-runnable-track{height:6px}
+  body.hop-vertical #settings .srow input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-8px;border-width:2px}
+  body.hop-vertical #settings .srow input[type=range]::-moz-range-track{height:6px}
+  body.hop-vertical #settings .srow input[type=range]::-moz-range-thumb{width:22px;height:22px;border-width:2px}
+  body.hop-vertical #settings .srow .icon{left:auto;right:4%;width:44px;height:44px;border-radius:8px}
+  body.hop-vertical #settings .srow .sbtn{font-size:16px;padding:10px 14px;min-width:80px;min-height:44px;border-radius:8px;left:auto;right:6%}
+  body.hop-vertical #settings #btnBack.mhot{left:25%;top:calc(26% + min(360px,50dvh) + 20px);width:50%;height:48px;font-size:20px;color:#08150f;background:#f2b632;border-radius:12px;font-family:inherit;font-weight:700}
+}

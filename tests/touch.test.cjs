@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
   let tid = 0;
   const touch = async (type, x, y, id = 0) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id }] });
   await page.goto((process.argv[2] || 'http://localhost:8010')); await page.waitForFunction(() => ready);
+  if (await page.evaluate(() => state === 'login')) await page.locator('#acGuest').tap();
   const ev = (f, a) => page.evaluate(f, a);
   const visible = sel => page.evaluate(s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.offsetWidth > 0; }, sel);
 
@@ -68,7 +69,8 @@ const assert = require('node:assert/strict');
 
   // ---------- Solar ----------
   await ev(() => { Hop.stop(); levelId = 'teresopolis'; show('playing'); player.wx = 960; player.wy = 860; promptBlocked = false; promptSign = null; checkOasisSign(); });
-  await page.locator('#btnYes').tap(); await page.waitForFunction(() => state === 'splay');
+  await page.locator('#btnYes').tap(); await page.waitForFunction(() => state === 'solarDifficulty');
+  await page.locator('[data-solar-diff="normal"]').tap(); await page.waitForFunction(() => state === 'splay');
   await page.waitForTimeout(3300);
   r.solarButtons = (await ev(() => [...document.querySelectorAll('.tbtn')].map(b => b.textContent).join(','))) === 'Pular,Bater,Esquiva,Lançar,Pregos';
   const keepSafe = setInterval(() => page.evaluate(() => { const g = Solar._debug(); if (g) { g.invul = Math.max(g.invul, 2); g.hurtT = 0; g.stumble = 0; } }).catch(() => {}), 40);   // inimigos não atrapalham o teste dos botões

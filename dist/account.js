@@ -1,11 +1,12 @@
 // Conta do jogador: login/cadastro (nome + senha) e sincronização das GenesisCoins e recordes com a API (server/).
 // As fases continuam lendo e gravando no localStorage como sempre; este módulo percebe o que mudou e envia para a conta:
 //   - moedas: só o que foi GANHO desde o último envio (assim duas telas abertas não apagam moedas uma da outra)
-//   - recordes: o servidor guarda sempre o maior valor
+//   - recordes: maior pontuação; menor tempo para a missão dos EPIs
 // Sem servidor (localhost, Netlify, sem internet e sem conta) o jogo segue como antes, salvando só no aparelho.
 const Account = (() => {
   const API = (window.GENESIO_API || '/api').replace(/\/$/, '');
-  const PROGRESS = /^genesio-(coins|best-(facil|normal|dificil)|nature-best-[a-z]+|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
+  const PROGRESS = /^genesio-(coins|best-(facil|normal|dificil)|nature-best-[a-z]+|nature-time-epi|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
+  const bestValue = (key, a, b) => key === 'genesio-nature-time-epi' ? (a > 0 ? Math.min(a, b) : b) : Math.max(a || 0, b);
   const SESSION_KEY = 'genesio-session';
   const $ = id => document.getElementById(id);
   const ls = window.localStorage;
@@ -28,7 +29,7 @@ const Account = (() => {
   Storage.prototype.setItem = function (k, v) {
     if (this === ls && session && !applying && PROGRESS.test(k)) {
       if (k === 'genesio-coins') { const d = (+v || 0) - (+lsGet(k) || 0); if (d > 0) pending.coins += d; }
-      else { const n = k === 'genesio-solar-cleared' ? (v === '1' ? 1 : 0) : (+v || 0); if (n > 0) pending.scores[k] = Math.max(pending.scores[k] || 0, n); }
+      else { const n = k === 'genesio-solar-cleared' ? (v === '1' ? 1 : 0) : (+v || 0); if (n > 0) pending.scores[k] = bestValue(k, pending.scores[k], n); }
       savePending(); schedule();
     }
     return rawSet.call(this, k, v);
@@ -66,7 +67,7 @@ const Account = (() => {
       for (let i = ls.length - 1; i >= 0; i--) { const k = ls.key(i); if (k && PROGRESS.test(k)) lsDel(k); }   // nada de outra conta fica no aparelho
       lsSet('genesio-coins', String((p.coins || 0) + pending.coins));
       const all = Object.assign({}, p.scores || {});
-      for (const [k, v] of Object.entries(pending.scores)) all[k] = Math.max(all[k] || 0, v);
+      for (const [k, v] of Object.entries(pending.scores)) all[k] = bestValue(k, all[k], v);
       for (const [k, v] of Object.entries(all)) lsSet(k, k === 'genesio-solar-cleared' ? (v ? '1' : '0') : String(v));
     } finally { applying = false; }
     refreshChip();
@@ -116,7 +117,9 @@ const Account = (() => {
     }
     session = { token, name: profile.name, avatar: profile.avatar || 'a', skin: profile.skin || 'classico' }; lsSet(SESSION_KEY, JSON.stringify(session));
     loadPending();
-    pending.coins += carry.coins; Object.assign(pending.scores, carry.scores); savePending();
+    pending.coins += carry.coins;
+    for (const [k, v] of Object.entries(carry.scores)) pending.scores[k] = bestValue(k, pending.scores[k], v);
+    savePending();
     applyProfile(profile);
     if (hasPending()) schedule(300);
   }

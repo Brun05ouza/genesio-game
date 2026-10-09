@@ -32,7 +32,8 @@ const SESSION_DAYS = 180;
 
 // ---- regras do que pode ser salvo ----
 const NAME_RE = /^[\p{L}\p{N} _.\-]{3,20}$/u;            // 3 a 20: letras (com acento), números, espaço, _ . -
-const SCORE_KEY_RE = /^genesio-(best-(facil|normal|dificil)|nature-best-[a-z]+|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
+const SCORE_KEY_RE = /^genesio-(best-(facil|normal|dificil)|nature-best-[a-z]+|nature-time-epi|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
+const isTimeScore = key => key === 'genesio-nature-time-epi';
 const MAX_COINS_PER_SYNC = 5000, MAX_SCORE = 10000000;
 const AVATARS = ['a', 'b', 'c', 'd', 'e'];
 const SKINS = ['classico'];   // Novas profissões e coleção rara: em breve. Perfis já salvos são preservados.
@@ -97,7 +98,7 @@ function memoryStore(file) {
     },
     async ranking(key, limit, uid) {
       const val = u => key === 'coins' ? u.coins : (u.scores[key] || 0);
-      const rows = users.filter(u => val(u) > 0).sort((a, b) => val(b) - val(a) || a.id - b.id);
+      const rows = users.filter(u => val(u) > 0).sort((a, b) => (isTimeScore(key) ? val(a) - val(b) : val(b) - val(a)) || a.id - b.id);
       const me = uid ? rows.findIndex(u => u.id === uid) : -1;
       const pick = u => ({ name: u.name, avatar: u.avatar || 'a', skin: u.skin || 'classico', value: val(u) });
       return { top: rows.slice(0, limit).map(pick), me: me >= 0 ? { rank: me + 1, ...pick(rows[me]) } : null, total: rows.length };
@@ -105,7 +106,7 @@ function memoryStore(file) {
     async dropOtherSessions(uid, keep) { for (const [h, s] of sessions) if (s.uid === uid && h !== keep) sessions.delete(h); save(); },
     async addProgress(uid, coins, scores) {
       const u = users.find(x => x.id === uid); u.coins += coins;
-      for (const [k, v] of Object.entries(scores)) u.scores[k] = Math.max(u.scores[k] || 0, v);
+      for (const [k, v] of Object.entries(scores)) u.scores[k] = isTimeScore(k) && u.scores[k] > 0 ? Math.min(u.scores[k], v) : Math.max(u.scores[k] || 0, v);
       save();
     },
   };
@@ -149,7 +150,7 @@ function pgStore(url) {
         ? `SELECT id, name, avatar, skin, coins AS value FROM users WHERE coins > 0`
         : `SELECT u.id, u.name, u.avatar, u.skin, s.value FROM scores s JOIN users u ON u.id = s.user_id WHERE s.key = $1 AND s.value > 0`;
       const args = key === 'coins' ? [] : [key];
-      const ranked = `SELECT *, ROW_NUMBER() OVER (ORDER BY value DESC, id) AS rank FROM (${base}) t`;
+      const ranked = `SELECT *, ROW_NUMBER() OVER (ORDER BY value ${isTimeScore(key) ? 'ASC' : 'DESC'}, id) AS rank FROM (${base}) t`;
       const top = (await q(`${ranked} ORDER BY rank LIMIT ${+limit}`, args)).rows;
       let me = null, total = 0;
       const tot = await q(`SELECT COUNT(*)::int AS n FROM (${base}) t`, args); total = tot.rows[0].n;
@@ -165,7 +166,7 @@ function pgStore(url) {
         if (coins) await c.query('UPDATE users SET coins = coins + $2 WHERE id = $1', [uid, coins]);
         for (const [k, v] of Object.entries(scores)) {
           await c.query(`INSERT INTO scores (user_id, key, value) VALUES ($1, $2, $3)
-            ON CONFLICT (user_id, key) DO UPDATE SET value = GREATEST(scores.value, EXCLUDED.value), updated_at = now()`, [uid, k, v]);
+            ON CONFLICT (user_id, key) DO UPDATE SET value = ${isTimeScore(k) ? 'LEAST' : 'GREATEST'}(scores.value, EXCLUDED.value), updated_at = now()`, [uid, k, v]);
         }
         await c.query('COMMIT');
       } catch (e) { await c.query('ROLLBACK'); throw e; } finally { c.release(); }
@@ -279,7 +280,7 @@ const routes = {
     const scores = {};
     for (const [k, v] of Object.entries(body.scores || {})) {
       const n = Math.floor(+v);
-      if (SCORE_KEY_RE.test(k) && n > 0 && n <= MAX_SCORE) scores[k] = k === 'genesio-solar-cleared' ? 1 : n;
+      if (SCORE_KEY_RE.test(k) && n > 0 && n <= (isTimeScore(k) ? 60000 : MAX_SCORE)) scores[k] = k === 'genesio-solar-cleared' ? 1 : n;
     }
     await store.addProgress(u.id, coins, scores);
     return [200, { profile: await store.profile(u.id) }];
