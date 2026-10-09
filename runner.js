@@ -74,6 +74,7 @@ const Runner = (() => {
 
   // ---- overlay (pausa / fim de jogo) ----
   function showOverlay(kind) {
+    el('rSettings').hidden = kind !== 'pause';
     el('rTitle').textContent = kind === 'over' ? 'Fim de jogo' : 'Pausado';
     el('rInfo').innerHTML = kind === 'over'
       ? `Pontos: <b>${points()}</b> · Moedas: <b>${g.coins}</b> <small>(viram GenesisCoins)</small><br>Recorde (${g.d.label}): <b>${g.best}</b>${g.newRecord ? ' 🏆 novo!' : ''}`

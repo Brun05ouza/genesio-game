@@ -126,6 +126,7 @@ const Hop = (() => {
   // ---- telas ----
   function hideOverlay() { el('hOverlay').classList.remove('active'); }
   function showOverlay(kind) {
+    el('hSettings').hidden = kind !== 'pause';
     const p = points();
     el('hTitle').textContent = kind === 'pause' ? 'Pausado' : 'Você caiu!';
     el('hPrimary').textContent = kind === 'pause' ? 'Continuar' : 'Subir de novo';

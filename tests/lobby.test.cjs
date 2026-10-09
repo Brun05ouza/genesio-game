@@ -21,7 +21,7 @@ const URL = process.argv[2] || 'http://localhost:8010';
   r.blockedPoints = bad.every(v => !v);
 
   const hold = async (key, ms, start) => {
-    await ev(([x, y]) => { show('playing'); player.wx = x; player.wy = y; }, start);
+    await ev(([x, y]) => { show('playing'); player.wx = x; player.wy = y; if (typeof Ranking !== 'undefined') Ranking.block(); }, start);   // o quadro do ranking não abre no meio do teste
     await page.keyboard.down(key); await page.waitForTimeout(ms); await page.keyboard.up(key);
     return ev(() => ({ x: player.wx, y: player.wy, lv: levelId, st: state }));
   };

@@ -1,10 +1,10 @@
 // Contas: cadastro, login, sincronização de GenesisCoins e recordes, sessão salva, sair, e jogo sem servidor.
-// Precisa da API rodando junto com o jogo:  (cd server && PORT=8002 STATIC_DIR=.. node server.js)  →  node tests/account.test.cjs
+// Precisa da API rodando junto com o jogo:  (cd server && DATABASE_URL= NO_RATE_LIMIT=1 PORT=8002 STATIC_DIR=.. node server.js)  →  node tests/account.test.cjs
 // Sem DATABASE_URL a API usa memória (cada vez que reinicia, as contas somem).
 const { chromium } = require('C:/Users/bs902/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const assert = require('node:assert/strict');
 const URL = process.argv[2] || 'http://localhost:8002';
-const NOAPI = process.argv[3] || 'http://localhost:8010';           // servidor sem API (só arquivos)
+const NOAPI = process.argv[3] || URL; // URL opcional sem API; por padrão simula a indisponibilidade na própria página
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const r = {};
@@ -48,10 +48,13 @@ const NOAPI = process.argv[3] || 'http://localhost:8010';           // servidor 
     localStorage.setItem('genesio-best-normal', '2500');                                          // Oásis
     localStorage.setItem('genesio-climb-best', '33');
     localStorage.setItem('genesio-solar-cleared', '1');
+    localStorage.setItem('genesio-solar-best-facil', '1800');
+    localStorage.setItem('genesio-solar-best-dificil', '1500');
   });
   await p1.waitForTimeout(2500);
   me = await api(p1, 'GET', '/me', null, token);
   r.sincronizou = me.data.profile.coins === 107 && me.data.profile.scores['genesio-best-normal'] === 2500 && me.data.profile.scores['genesio-climb-best'] === 33 && me.data.profile.scores['genesio-solar-cleared'] === 1;
+  r.dificuldadesSolarSincronizadas = me.data.profile.scores['genesio-solar-best-facil'] === 1800 && me.data.profile.scores['genesio-solar-best-dificil'] === 1500;
   // recorde menor não apaga o maior
   await p1.evaluate(() => localStorage.setItem('genesio-best-normal', '10')); await p1.waitForTimeout(2200);
   me = await api(p1, 'GET', '/me', null, token);
@@ -91,6 +94,7 @@ const NOAPI = process.argv[3] || 'http://localhost:8010';           // servidor 
 
   // ---- sem servidor de API: joga sem conta, direto no menu ----
   const p3 = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
+  if (!process.argv[3]) await p3.route('**/api/**', route => route.abort());
   await p3.goto(NOAPI); await p3.waitForFunction(() => ready); await p3.waitForTimeout(3500);
   r.semServidorJogaSemConta = await p3.evaluate(() => state === 'menu' && !Account.isLogged());
   r.semErros = errs.length === 0;

@@ -72,6 +72,17 @@ body.playing .hud{display:block}
 .mascot2{height:clamp(100px,20vh,170px);animation:bob 1.4s ease-in-out infinite;filter:drop-shadow(0 10px 8px rgba(0,0,0,.5))}
 .btn.diff{display:flex;flex-direction:column;align-items:center;gap:2px}
 .btn.diff small{font:500 14px 'Fredoka',sans-serif;opacity:.85}
+#solarDifficulty{background:linear-gradient(rgba(6,30,18,.65),rgba(6,30,18,.88)),url('fase-solar-do-bosque/bg0.jpg') center/cover no-repeat;padding:20px;box-sizing:border-box;overflow-y:auto}
+#solarDifficulty .tagline{margin:0 0 8px}
+.solar-difficulties{display:flex;gap:16px;width:min(900px,94vw)}
+.btn.solar-diff{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 14px;font-size:22px}
+.solar-diff b{font-size:28px}
+.solar-diff span{font-size:17px;line-height:1.35;min-height:2.7em}
+.solar-diff small{font:500 14px/1.4 'Fredoka',sans-serif}
+.solar-diff:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
+.solar-diff [id^='solar-best-']{margin-top:6px}
+@media(max-height:480px){#solarDifficulty{gap:8px;padding:12px}#solarDifficulty .logo{font-size:36px}#solarDifficulty .tagline{font-size:16px;margin:0}.btn.solar-diff{gap:5px;padding:12px 10px}.solar-diff b{font-size:24px}.solar-diff span{font-size:14px}.solar-diff small{font-size:12px}}
+@media(max-width:560px){#solarDifficulty{justify-content:flex-start}.solar-difficulties{flex-direction:column;width:100%;max-width:360px}.btn.solar-diff{flex:none}.solar-diff span{min-height:0}#solarDifficulty .logo{font-size:32px;text-align:center}}
 .btn.hard{background:#a8412f}
 .btn.hard:hover{background:#c4503b}
 
@@ -273,6 +284,15 @@ body.touch #talkSkip{top:max(12px,env(safe-area-inset-top))}
   padding:6px 12px 6px 6px;border-radius:16px;background:rgba(8,40,26,.9);border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink),0 8px 18px rgba(0,0,0,.35);
   color:#fff;font-family:'Fredoka',sans-serif;pointer-events:auto;zoom:var(--k,1)}
 .profile-card[hidden]{display:none}
+.lobby-online{position:absolute;left:max(70px,env(safe-area-inset-left));top:max(16px,env(safe-area-inset-top));z-index:4;display:flex;align-items:center;gap:8px;border:2px solid var(--ink);border-radius:12px;padding:9px 12px;background:rgba(8,40,26,.95);color:#e6f6ee;font:700 14px 'Fredoka',sans-serif;cursor:pointer;pointer-events:auto;max-width:calc(100vw - 320px)}
+.lobby-online[hidden]{display:none}
+.lobby-online i{width:8px;height:8px;border-radius:50%;background:#c5cfca;flex:none}
+.lobby-online.connected i{background:#5cc494}
+.lobby-online:hover{background:#205a3b}
+.lobby-online:focus-visible{outline:3px solid #fff3b0;outline-offset:3px}
+@media(max-width:600px){.lobby-online{top:80px;left:14px;max-width:calc(100vw - 52px)}}
+@media(max-height:480px){.lobby-online{font-size:12px;padding:7px 10px;top:16px}}
+@media(max-width:600px) and (max-height:480px){.lobby-online{top:72px}}
 .profile-card img{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
 .pc-info{display:flex;flex-direction:column;line-height:1.15;min-width:0}
 .pc-info b{font-size:17px;max-width:11em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -314,3 +334,208 @@ body.on-login #rotate{display:none!important}               /* em pé dá para d
 .ac-guest{background:none;border:0;color:#cfe9db;font:600 14px 'Fredoka',sans-serif;text-decoration:underline;cursor:pointer;padding:2px;align-self:center}
 .ac-guest:hover{color:#fff}
 #login .ac-guest{display:block}
+
+/* cartão do jogador: clicável (abre o perfil) */
+.profile-card{cursor:pointer;transition:transform .12s}
+.profile-card:hover{transform:translateY(-2px)}
+.profile-card:focus-visible{outline:3px solid #fff3b0;outline-offset:3px}
+
+/* ===== Meu perfil ===== (tudo com #profile na frente: não mexe nas outras telas) */
+#profile{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%);z-index:6;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+#profile .pf-panel{width:min(94vw,640px);max-height:100%;display:flex;flex-direction:column;padding:0;gap:0;overflow:hidden;text-align:left}
+#profile .pf-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px 12px;border-bottom:2px solid rgba(255,255,255,.07)}
+#profile .pf-head h2{margin:0;font-size:26px}
+#profile .pf-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;
+  scrollbar-width:thin;scrollbar-color:#2f8f63 transparent}
+#profile .pf-body::-webkit-scrollbar{width:10px}
+#profile .pf-body::-webkit-scrollbar-track{background:transparent;margin:6px}
+#profile .pf-body::-webkit-scrollbar-thumb{background:#2f8f63;border-radius:10px;border:3px solid #0a1a12}
+#profile .pf-body::-webkit-scrollbar-thumb:hover{background:#3fb37d}
+#profile .pf-foot{display:flex;justify-content:center;gap:12px;padding:12px 20px 16px;border-top:2px solid rgba(255,255,255,.07);background:rgba(0,0,0,.15)}
+
+#profile .pf-card{background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.06);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+#profile .pf-card h3{margin:0;font:700 16px 'Fredoka',sans-serif;color:#d8f5e6;letter-spacing:.02em}
+#profile .pf-card p.pf-sub{margin:-4px 0 0;font:500 13px 'Fredoka',sans-serif;color:#9cc7b1}
+
+/* cabeçalho: foto grande + nome e moedas */
+#profile .pf-me{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:center}
+#profile .pf-hero{width:132px;height:132px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 55%,#2f8f63,#123f2a 72%);border:3px solid var(--ink);box-shadow:0 0 0 4px rgba(242,182,50,.25)}
+#profile .pf-hero img{width:104px;height:104px;object-fit:contain;filter:drop-shadow(0 5px 5px rgba(0,0,0,.4))}
+#profile .pf-meinfo{display:flex;flex-direction:column;gap:10px;min-width:0}
+#profile .pf-coins{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.28);font:600 14px 'Fredoka',sans-serif;color:#d8f5e6}
+#profile .pf-coins b{color:#ffd34d;font-size:17px}
+#profile .pf-name{display:flex;gap:8px;align-items:stretch}
+#profile .pf-name input{flex:1;min-width:0;font:600 18px 'Fredoka',sans-serif;padding:9px 12px;border-radius:10px;border:3px solid var(--ink);background:#fffdf0;color:#14251c;outline:none;-webkit-user-select:text;user-select:text}
+#profile input:focus{border-color:#f2b632;box-shadow:0 0 0 3px rgba(242,182,50,.35)}
+#profile .pf-name .btn{flex:none;white-space:nowrap}
+#profile .ac-msg{margin:0;min-height:0;font:600 13px 'Fredoka',sans-serif}
+#profile .ac-msg:empty{display:none}
+
+/* fotos */
+#profile .pf-avatars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+#profile .pf-av{aspect-ratio:1;min-width:0;overflow:hidden;padding:6px;border-radius:14px;border:3px solid var(--ink);background:#173f2c;cursor:pointer;display:grid;place-items:center;transition:transform .1s,background .1s}
+#profile .pf-av img{max-width:100%;max-height:100%;object-fit:contain}
+#profile .pf-av:hover{background:#21583d;transform:translateY(-2px)}
+#profile .pf-av.on{background:#2f8f63;border-color:#f2b632;box-shadow:0 0 0 3px rgba(242,182,50,.35)}
+
+/* roupas */
+#profile .pf-skins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+#profile .pf-skin{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;aspect-ratio:1/.9;border-radius:14px;border:3px solid var(--ink);background:#173f2c;font:600 12px 'Fredoka',sans-serif;color:#cfe9db}
+#profile .pf-skin img{height:46%}
+#profile .pf-skin.on{border-color:#2f8f63;background:#1e5a3d}
+#profile .pf-skin.lock{opacity:.5;border-style:dashed;border-color:#2c4a3a}
+#profile .pf-skin.lock span:first-child{font-size:20px}
+
+/* senha */
+#profile .pf-pass-open{align-self:flex-start}
+#profile .pf-pass-open[hidden],#profile #pfPassForm[hidden]{display:none}
+#profile #pfPassForm{display:flex;flex-direction:column;gap:10px}
+#profile #pfPassForm .ac-row input{border-width:3px}
+#profile .pf-pass-btns{display:flex;gap:8px;flex-wrap:wrap}
+
+@media (max-width:560px){
+  #profile .pf-me{grid-template-columns:1fr;justify-items:center;text-align:center}
+  #profile .pf-meinfo{width:100%}
+  #profile .pf-coins{align-self:center}
+  #profile .pf-skins{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-height:480px){
+  #profile{padding:6px 10px}
+  #profile .pf-head{padding:8px 14px}
+  #profile .pf-head h2{font-size:20px}
+  #profile .pf-body{padding:10px 14px 14px;gap:10px}
+  #profile .pf-foot{display:none}
+  #profile .pf-head .pf-headbtns{display:flex}
+  #profile .pf-card{padding:10px 12px;gap:8px}
+  #profile .pf-me{grid-template-columns:84px 1fr;gap:12px}
+  #profile .pf-hero{width:84px;height:84px}#profile .pf-hero img{width:66px;height:66px}
+  #profile .pf-name input{padding:5px 10px;font-size:16px}
+  #profile .pf-avatars{grid-template-columns:repeat(5,minmax(0,64px));gap:8px}
+  #profile .pf-skins{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+  #profile .pf-skin{font-size:9px}
+  #profile #pfPassForm .ac-row{flex-direction:row;align-items:center;gap:8px}
+  #profile #pfPassForm .ac-row span{flex:0 0 7em;font-size:13px}
+  #profile #pfPassForm .ac-row input{flex:1;min-width:0;padding:4px 8px;font-size:15px}
+}
+#profile .pf-headbtns{display:none;gap:8px}
+#profile .pf-headbtns .btn{padding:4px 12px;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+#profile .pf-x{width:40px;height:40px;flex:none;border-radius:12px;border:2px solid rgba(255,255,255,.15);background:rgba(0,0,0,.25);color:#e6f6ee;font:700 20px/1 'Fredoka',sans-serif;cursor:pointer;display:grid;place-items:center}
+#profile .pf-x:hover{background:#a04a4a;border-color:#a04a4a;color:#fff}
+#profile .pf-sec{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#profile .pf-sec .pf-pass-open[hidden]{display:none}
+#profile .pf-logout{background:transparent;border-color:#a04a4a;color:#ffb0a0;box-shadow:none}
+#profile .pf-logout:hover{background:#a04a4a;color:#fff}
+@media (max-height:480px){
+  #profile .pf-foot{display:flex;padding:6px 14px 8px}
+  #profile .pf-foot .btn{padding:5px 18px;font-size:16px}
+  #profile .pf-x{width:32px;height:32px;font-size:16px}
+}
+
+/* roupas selecionáveis */
+#profile .pf-skins{grid-template-columns:repeat(3,minmax(0,1fr))}
+#profile .pf-skin{cursor:pointer;aspect-ratio:auto;height:auto;padding:8px 4px 6px;transition:transform .1s,background .1s}
+#profile .pf-skin img{height:auto;width:72%;aspect-ratio:1;object-fit:contain}
+#profile .pf-skin span{font-size:12px;text-align:center;line-height:1.1;min-height:2.2em;display:flex;align-items:center}
+#profile .pf-skin:hover{background:#21583d;transform:translateY(-2px)}
+#profile .pf-skin.on{background:#2f8f63;border-color:#f2b632;box-shadow:0 0 0 3px rgba(242,182,50,.35)}
+#profile .pf-hero img{object-fit:contain}
+@media (max-width:560px){#profile .pf-skins{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-height:480px){#profile .pf-skins{grid-template-columns:repeat(5,minmax(0,1fr))}#profile .pf-skin span{font-size:10px}}
+
+/* roupas: cartões brancos; profissões bloqueadas ("Em breve") */
+#profile .pf-skin{position:relative;background:#fff;border:3px solid #d7e6dd;color:#1d3a2b}
+#profile .pf-skin:hover{background:#fff}
+#profile .pf-skin.on{background:#fff;border-color:#f2b632;box-shadow:0 0 0 3px rgba(242,182,50,.35)}
+#profile .pf-skin.lock{opacity:1;border-style:solid;cursor:default}
+#profile .pf-skin.lock:hover{transform:none}
+#profile .pf-skin.lock img{filter:grayscale(1) opacity(.45)}
+#profile .pf-skin.lock span{color:#7c8f85}
+#profile .pf-soon{position:absolute;top:6px;right:6px;font:700 10px 'Fredoka',sans-serif;font-style:normal;color:#fff;background:#3b4a42;border-radius:999px;padding:2px 7px}
+@media (max-height:480px){#profile .pf-soon{font-size:8px;padding:1px 5px;top:3px;right:3px}}
+
+/* ===== Ranking (tudo com #ranking na frente) ===== */
+#ranking{background:radial-gradient(ellipse at center,#1b5c40 0%,#08150f 75%);z-index:6;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+#ranking .rk-panel{width:min(94vw,820px);max-height:100%;display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden;text-align:left}
+#ranking .rk-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px 10px}
+#ranking .rk-head h2{margin:0;font-size:26px}
+#ranking .rk-title2{margin:2px 0 0;font:600 14px 'Fredoka',sans-serif;color:#9cc7b1}
+#ranking .rk-x{width:40px;height:40px;flex:none;border-radius:12px;border:2px solid rgba(255,255,255,.15);background:rgba(0,0,0,.25);color:#e6f6ee;font:700 20px/1 'Fredoka',sans-serif;cursor:pointer}
+#ranking .rk-x:hover{background:#a04a4a;border-color:#a04a4a;color:#fff}
+#ranking .rk-tabs{display:grid;grid-template-columns:100px repeat(4,minmax(0,1fr));gap:8px;padding:4px 20px 14px;flex-shrink:0}
+#ranking .rk-tab{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 6px;border-radius:14px;border:2px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:#cfe9db;font:700 13px 'Fredoka',sans-serif;cursor:pointer;line-height:1.2;text-align:center}
+#ranking .rk-tab img{width:48px;height:48px;object-fit:contain;flex:none;image-rendering:auto}
+#ranking .rk-tab>span:last-child{min-height:2.4em;display:flex;align-items:center;justify-content:center}
+#ranking .rk-general .pc-coin{width:32px;height:32px;margin:8px}
+#ranking .rk-tab:focus-visible{outline:3px solid #fff3b0;outline-offset:2px}
+#ranking .rk-tab:hover{background:rgba(255,255,255,.08)}
+#ranking .rk-tab.on{background:#2f8f63;border-color:#f2b632;color:#fff}
+#ranking .rk-sub{display:flex;gap:6px;padding:0 20px 10px;flex-wrap:wrap}
+#ranking .rk-sub[hidden]{display:none}
+#ranking .rk-subtab{padding:5px 12px;border-radius:10px;border:0;background:rgba(255,255,255,.07);color:#cfe9db;font:600 13px 'Fredoka',sans-serif;cursor:pointer}
+#ranking .rk-subtab.on{background:#f2b632;color:#2a1d05}
+#ranking .rk-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 20px 14px;border-top:2px solid rgba(255,255,255,.07);scrollbar-width:thin;scrollbar-color:#2f8f63 transparent}
+#ranking .rk-body::-webkit-scrollbar{width:10px}
+#ranking .rk-body::-webkit-scrollbar-thumb{background:#2f8f63;border-radius:10px;border:3px solid #0a1a12}
+#ranking .rk-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+#ranking .rk-row{display:grid;grid-template-columns:44px 44px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.06)}
+#ranking .rk-row img{width:44px;height:44px;object-fit:contain;border-radius:10px;background:#fff;padding:2px}
+#ranking .rk-pos{font:700 18px 'Fredoka',sans-serif;color:#cfe9db;text-align:center}
+#ranking .rk-row.top1 .rk-pos,#ranking .rk-row.top2 .rk-pos,#ranking .rk-row.top3 .rk-pos{font-size:26px}
+#ranking .rk-row.top1{background:linear-gradient(90deg,rgba(242,182,50,.28),rgba(242,182,50,.06));border-color:rgba(242,182,50,.5)}
+#ranking .rk-row.top2{background:linear-gradient(90deg,rgba(220,230,240,.18),rgba(220,230,240,.04))}
+#ranking .rk-row.top3{background:linear-gradient(90deg,rgba(205,127,50,.22),rgba(205,127,50,.04))}
+#ranking .rk-row.me{border-color:#5cc494;box-shadow:0 0 0 2px rgba(92,196,148,.35)}
+#ranking .rk-name{font:700 16px 'Fredoka',sans-serif;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ranking .rk-name small{color:#9cc7b1;font-weight:600}
+#ranking .rk-val{font:700 15px 'Fredoka',sans-serif;color:#ffd34d;white-space:nowrap}
+#ranking .rk-info{padding:22px 10px;text-align:center;font:600 15px 'Fredoka',sans-serif;color:#cfe9db}
+#ranking .rk-me{margin-top:14px;padding-top:12px;border-top:2px dashed rgba(255,255,255,.12)}
+#ranking .rk-me[hidden]{display:none}
+#ranking .rk-me p{margin:0 0 8px;font:600 13px 'Fredoka',sans-serif;color:#9cc7b1;text-align:center}
+#ranking .rk-me .rk-list{margin:0}
+#ranking .rk-count{margin:0;padding:8px 20px 12px;font:600 12px 'Fredoka',sans-serif;color:#7fa892;text-align:right;border-top:2px solid rgba(255,255,255,.05)}
+#ranking .rk-count:empty{display:none}
+@media (max-height:480px){
+  #ranking{padding:6px 10px}
+  #ranking .rk-head{padding:8px 14px 6px}#ranking .rk-head h2{font-size:20px}#ranking .rk-title2{font-size:12px}
+  #ranking .rk-x{width:32px;height:32px;font-size:16px}
+  #ranking .rk-tabs{padding:2px 14px 6px}#ranking .rk-tab{padding:5px 6px;font-size:12px;gap:4px}
+  #ranking .rk-tab img{width:34px;height:34px}#ranking .rk-general .pc-coin{width:26px;height:26px;margin:4px}
+  #ranking .rk-sub{padding:0 14px 6px}
+  #ranking .rk-body{padding:2px 14px 10px}
+  #ranking .rk-row{grid-template-columns:34px 34px minmax(0,1fr) auto;padding:5px 10px;gap:8px}
+  #ranking .rk-row img{width:34px;height:34px}
+  #ranking .rk-name{font-size:14px}#ranking .rk-val{font-size:13px}
+  #ranking .rk-count{display:none}
+}
+@media (max-width:480px){#ranking .rk-row{grid-template-columns:34px 38px minmax(0,1fr);}#ranking .rk-val{grid-column:3;font-size:13px}}
+@media (max-width:600px){
+  #ranking .rk-tabs{grid-template-columns:repeat(2,minmax(0,1fr));padding:4px 14px 12px}
+  #ranking .rk-tab{flex-direction:row;justify-content:flex-start;gap:8px;padding:6px 8px;min-height:54px}
+  #ranking .rk-tab img{width:38px;height:38px}
+  #ranking .rk-tab>span:last-child{min-height:0;text-align:left}
+  #ranking .rk-general{grid-column:1/-1;justify-content:center;min-height:44px}
+  #ranking .rk-general .pc-coin{width:24px;height:24px;margin:0}
+}
+
+[data-pause-settings][hidden]{display:none}
+[id$="Overlay"] .dialog{max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box}
+[data-pause-settings]:focus-visible{outline:3px solid #fff3b0;outline-offset:3px}
+
+/* roupas raras: selo de raridade, requisito e barra de progresso */
+#profile .pf-tier{position:absolute;top:6px;left:6px;font:700 10px 'Fredoka',sans-serif;font-style:normal;color:#fff;border-radius:999px;padding:2px 8px;letter-spacing:.03em}
+#profile .t-rara .pf-tier{background:#2f7fd6}
+#profile .t-epica .pf-tier{background:#8a46d6}
+#profile .t-lendaria .pf-tier{background:linear-gradient(90deg,#e0a11a,#f7d36b);color:#3a2700}
+#profile .pf-skin.t-rara{border-color:#bcd7f5}
+#profile .pf-skin.t-epica{border-color:#d9c3f3}
+#profile .pf-skin.t-lendaria{border-color:#f2d68a;box-shadow:0 0 14px rgba(242,182,50,.35)}
+#profile .pf-skin.on{border-color:#f2b632;box-shadow:0 0 0 3px rgba(242,182,50,.45)}
+#profile .pf-need{display:block;font:600 10px/1.2 'Fredoka',sans-serif;color:#6a7d73;text-align:center;padding:0 4px}
+#profile .pf-bar{display:block;width:78%;height:6px;margin:4px auto 0;border-radius:6px;background:#e3ece7;overflow:hidden}
+#profile .pf-bar i{display:block;height:100%;background:#2f8f63;border-radius:6px}
+#profile .pf-skin.lock:not(.soon) img{filter:grayscale(.85) brightness(.85) opacity(.6)}
+@media (max-height:480px){#profile .pf-need{display:none}#profile .pf-tier{font-size:8px;padding:1px 5px;top:3px;left:3px}}
+#profile .pf-skin-status{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;width:100%;min-height:20px}
+#profile .pf-skin-status .pf-tier,#profile .pf-skin-status .pf-soon{position:static}
+#profile .pf-skin.soon .pf-need{display:block;line-height:1.35;margin-top:3px}

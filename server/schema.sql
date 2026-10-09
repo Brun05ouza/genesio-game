@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar text NOT NULL DEFAULT 'a';   -- foto do Genésio escolhida no perfil (a..e)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS skin text NOT NULL DEFAULT 'classico';   -- roupa escolhida no perfil (assets/skins/)
+
 CREATE TABLE IF NOT EXISTS scores (
   user_id    integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   key        text NOT NULL,                      -- ex.: genesio-best-normal, genesio-flow-best, genesio-climb-best
@@ -23,3 +26,4 @@ CREATE TABLE IF NOT EXISTS sessions (
   last_seen  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS scores_ranking ON scores(key, value DESC);   -- ranking por empreendimento

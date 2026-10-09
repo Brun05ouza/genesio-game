@@ -1,5 +1,5 @@
 // API do Genésio: contas (nome + senha), moedas (GenesisCoins) e recordes. Banco: Postgres do Neon.
-// Sem dependências além do driver "pg". Variáveis (arquivo server/.env ou ambiente):
+// Dependências: "pg" para o banco e "ws" para o lobby online. Variáveis (arquivo server/.env ou ambiente):
 //   DATABASE_URL   string de conexão do Neon (postgres://...?...sslmode=require). Sem ela, usa memória (só para testes).
 //   PORT           porta local (padrão 3077; o Nginx repassa /api/ para cá)
 //   STATIC_DIR     opcional: também serve os arquivos do jogo (para testar tudo junto no computador)
@@ -11,6 +11,7 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { createLobby } = require('./lobby');
 
 // ---- .env simples (chave=valor por linha) ----
 try {
@@ -31,8 +32,23 @@ const SESSION_DAYS = 180;
 
 // ---- regras do que pode ser salvo ----
 const NAME_RE = /^[\p{L}\p{N} _.\-]{3,20}$/u;            // 3 a 20: letras (com acento), números, espaço, _ . -
-const SCORE_KEY_RE = /^genesio-(best-(facil|normal|dificil)|nature-best-[a-z]+|climb-best|hop-best|flow-best|solar-cleared)$/;
+const SCORE_KEY_RE = /^genesio-(best-(facil|normal|dificil)|nature-best-[a-z]+|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
 const MAX_COINS_PER_SYNC = 5000, MAX_SCORE = 10000000;
+const AVATARS = ['a', 'b', 'c', 'd', 'e'];
+const SKINS = ['classico'];   // Novas profissões e coleção rara: em breve. Perfis já salvos são preservados.
+// roupas raras: só dá para vestir depois da conquista (o servidor confere com o que está salvo na conta)
+const SKIN_RULES = {
+  explorador: { stat: 'oasis', min: 5000 },          // Oásis: 5.000 pontos em qualquer dificuldade
+  cacto: { stat: 'genesio-nature-best-epi', min: 8 }, // Nature: todos os 8 EPIs
+  construtor: { stat: 'coins', min: 3000 },          // 3.000 GenesisCoins
+  astronauta: { stat: 'genesio-flow-best', min: 50 },// Flow: 50 pilares
+  neon: { stat: 'genesio-climb-best', min: 150 },    // Torre: 150 m
+  ninja: { stat: 'genesio-solar-cleared', min: 1 },  // Solar do Bosque: vencer o Golem
+  dourado: { stat: 'coins', min: 20000 },            // 20.000 GenesisCoins
+};
+const statOf = (p, stat) => stat === 'coins' ? p.coins : stat === 'oasis'
+  ? Math.max(p.scores['genesio-best-facil'] || 0, p.scores['genesio-best-normal'] || 0, p.scores['genesio-best-dificil'] || 0) : (p.scores[stat] || 0);
+const skinUnlocked = (p, skin) => !SKIN_RULES[skin] || statOf(p, SKIN_RULES[skin].stat) >= SKIN_RULES[skin].min;                 // fotos do Genésio que a pessoa pode escolher (assets/menu-g-?.png)
 const nameKey = n => n.trim().toLowerCase();
 
 // ---- senha: scrypt com sal aleatório ----
@@ -60,7 +76,7 @@ function memoryStore(file) {
     async init() {},
     async createUser(name, hash) {
       if (users.some(u => u.key === nameKey(name))) return null;
-      const u = { id: ++id, name: name.trim(), key: nameKey(name), hash, coins: 0, scores: {} }; users.push(u); save(); return { id: u.id, name: u.name };
+      const u = { id: ++id, name: name.trim(), key: nameKey(name), hash, coins: 0, scores: {}, avatar: 'a', skin: 'classico' }; users.push(u); save(); return { id: u.id, name: u.name };
     },
     async findUser(name) { const u = users.find(x => x.key === nameKey(name)); return u && { id: u.id, name: u.name, pass_hash: u.hash }; },
     async createSession(h, uid) { sessions.set(h, { uid, at: Date.now() }); save(); },
@@ -69,7 +85,24 @@ function memoryStore(file) {
       const u = users.find(x => x.id === s.uid); return u && { id: u.id, name: u.name };
     },
     async deleteSession(h) { sessions.delete(h); save(); },
-    async profile(uid) { const u = users.find(x => x.id === uid); return { name: u.name, coins: u.coins, scores: { ...u.scores } }; },
+    async profile(uid) { const u = users.find(x => x.id === uid); return { name: u.name, coins: u.coins, scores: { ...u.scores }, avatar: u.avatar || 'a', skin: u.skin || 'classico' }; },
+    async passHash(uid) { const u = users.find(x => x.id === uid); return u && u.hash; },
+    async updateUser(uid, f) {
+      const u = users.find(x => x.id === uid);
+      if (f.name !== undefined) { if (users.some(x => x.id !== uid && x.key === nameKey(f.name))) return false; u.name = f.name.trim(); u.key = nameKey(f.name); }
+      if (f.avatar !== undefined) u.avatar = f.avatar;
+      if (f.skin !== undefined) u.skin = f.skin;
+      if (f.hash !== undefined) u.hash = f.hash;
+      save(); return true;
+    },
+    async ranking(key, limit, uid) {
+      const val = u => key === 'coins' ? u.coins : (u.scores[key] || 0);
+      const rows = users.filter(u => val(u) > 0).sort((a, b) => val(b) - val(a) || a.id - b.id);
+      const me = uid ? rows.findIndex(u => u.id === uid) : -1;
+      const pick = u => ({ name: u.name, avatar: u.avatar || 'a', skin: u.skin || 'classico', value: val(u) });
+      return { top: rows.slice(0, limit).map(pick), me: me >= 0 ? { rank: me + 1, ...pick(rows[me]) } : null, total: rows.length };
+    },
+    async dropOtherSessions(uid, keep) { for (const [h, s] of sessions) if (s.uid === uid && h !== keep) sessions.delete(h); save(); },
     async addProgress(uid, coins, scores) {
       const u = users.find(x => x.id === uid); u.coins += coins;
       for (const [k, v] of Object.entries(scores)) u.scores[k] = Math.max(u.scores[k] || 0, v);
@@ -97,10 +130,34 @@ function pgStore(url) {
     },
     async deleteSession(h) { await q('DELETE FROM sessions WHERE token_hash = $1', [h]); },
     async profile(uid) {
-      const u = (await q('SELECT name, coins FROM users WHERE id = $1', [uid])).rows[0];
+      const u = (await q('SELECT name, coins, avatar, skin FROM users WHERE id = $1', [uid])).rows[0];
       const s = (await q('SELECT key, value FROM scores WHERE user_id = $1', [uid])).rows;
-      return { name: u.name, coins: +u.coins, scores: Object.fromEntries(s.map(r => [r.key, +r.value])) };
+      return { name: u.name, coins: +u.coins, scores: Object.fromEntries(s.map(r => [r.key, +r.value])), avatar: u.avatar || 'a', skin: u.skin || 'classico' };
     },
+    async passHash(uid) { const r = await q('SELECT pass_hash FROM users WHERE id = $1', [uid]); return r.rows[0] && r.rows[0].pass_hash; },
+    async updateUser(uid, f) {
+      try {
+        if (f.name !== undefined) await q('UPDATE users SET name = $2, name_key = $3 WHERE id = $1', [uid, f.name.trim(), nameKey(f.name)]);
+        if (f.avatar !== undefined) await q('UPDATE users SET avatar = $2 WHERE id = $1', [uid, f.avatar]);
+        if (f.skin !== undefined) await q('UPDATE users SET skin = $2 WHERE id = $1', [uid, f.skin]);
+        if (f.hash !== undefined) await q('UPDATE users SET pass_hash = $2 WHERE id = $1', [uid, f.hash]);
+        return true;
+      } catch (e) { if (e.code === '23505') return false; throw e; }      // nome já usado por outra pessoa
+    },
+    async ranking(key, limit, uid) {
+      const base = key === 'coins'
+        ? `SELECT id, name, avatar, skin, coins AS value FROM users WHERE coins > 0`
+        : `SELECT u.id, u.name, u.avatar, u.skin, s.value FROM scores s JOIN users u ON u.id = s.user_id WHERE s.key = $1 AND s.value > 0`;
+      const args = key === 'coins' ? [] : [key];
+      const ranked = `SELECT *, ROW_NUMBER() OVER (ORDER BY value DESC, id) AS rank FROM (${base}) t`;
+      const top = (await q(`${ranked} ORDER BY rank LIMIT ${+limit}`, args)).rows;
+      let me = null, total = 0;
+      const tot = await q(`SELECT COUNT(*)::int AS n FROM (${base}) t`, args); total = tot.rows[0].n;
+      if (uid) { const r = await q(`SELECT * FROM (${ranked}) x WHERE id = $${args.length + 1}`, [...args, uid]); me = r.rows[0] || null; }
+      const pick = r => r && ({ name: r.name, avatar: r.avatar || 'a', skin: r.skin || 'classico', value: +r.value, ...(r.rank ? { rank: +r.rank } : {}) });
+      return { top: top.map(r => { const p = pick(r); delete p.rank; return p; }), me: pick(me), total };
+    },
+    async dropOtherSessions(uid, keep) { await q('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [uid, keep]); },
     async addProgress(uid, coins, scores) {
       const c = await pool.connect();
       try {
@@ -120,6 +177,7 @@ const store = process.env.DATABASE_URL ? pgStore(process.env.DATABASE_URL) : mem
 // ---- limite de tentativas de login/cadastro por IP ----
 const tries = new Map();
 function limited(ip) {
+  if (process.env.NO_RATE_LIMIT === '1') return false;          // só nos testes automáticos
   const now = Date.now(), t = (tries.get(ip) || []).filter(x => now - x < 10 * 60e3);
   t.push(now); tries.set(ip, t); return t.length > 30;
 }
@@ -146,6 +204,14 @@ async function newSession(user) { const token = crypto.randomBytes(32).toString(
 
 const routes = {
   'GET /api/health': async () => [200, { ok: true }],
+  // ranking: ?key=coins | genesio-best-normal | genesio-flow-best ... (público; com login também devolve a posição da pessoa)
+  'GET /api/ranking': async req => {
+    const url = new URL(req.url, 'http://x'), key = url.searchParams.get('key') || 'coins';
+    if (key !== 'coins' && !SCORE_KEY_RE.test(key)) return [400, { error: 'Ranking inválido.' }];
+    const limit = Math.max(1, Math.min(50, +url.searchParams.get('limit') || 10));
+    const u = await authUser(req).catch(() => null);
+    return [200, await store.ranking(key, limit, u && u.id)];
+  },
   'POST /api/register': async (req, body, ip) => {
     if (limited(ip)) return [429, { error: 'Muitas tentativas. Espere alguns minutos.' }];
     const name = String(body.name || '').trim().replace(/\s+/g, ' '), pw = String(body.password || '');
@@ -163,12 +229,49 @@ const routes = {
   },
   'POST /api/logout': async req => {
     const m = String(req.headers.authorization || '').match(/^Bearer ([a-f0-9]{64})$/);
-    if (m) await store.deleteSession(tokenHash(m[1]));
+    if (m) { await store.deleteSession(tokenHash(m[1])); lobby.closeToken(m[1]); }
     return [200, { ok: true }];
   },
   'GET /api/me': async req => {
     const u = await authUser(req); if (!u) return [401, { error: 'Sessão expirada. Entre de novo.' }];
-    return [200, { profile: await store.profile(u.id) }];
+    const profile = await store.profile(u.id);
+    lobby.updateProfile(u.id, profile);
+    return [200, { profile }];
+  },
+  // personalização do perfil: nome e foto do Genésio
+  'POST /api/profile': async (req, body) => {
+    const u = await authUser(req); if (!u) return [401, { error: 'Sessão expirada. Entre de novo.' }];
+    const f = {};
+    if (body.name !== undefined) {
+      const name = String(body.name).trim().replace(/\s+/g, ' ');
+      if (!NAME_RE.test(name)) return [400, { error: 'O nome precisa ter de 3 a 20 letras ou números.' }];
+      f.name = name;
+    }
+    if (body.avatar !== undefined) {
+      if (!AVATARS.includes(body.avatar)) return [400, { error: 'Foto inválida.' }];
+      f.avatar = body.avatar;
+    }
+    if (body.skin !== undefined) {
+      if (!SKINS.includes(body.skin)) return [400, { error: 'Essa roupa ainda não está disponível.' }];
+      if (!skinUnlocked(await store.profile(u.id), body.skin)) return [403, { error: 'Você ainda não conquistou essa roupa.' }];
+      f.skin = body.skin;
+    }
+    if (!(await store.updateUser(u.id, f))) return [409, { error: 'Esse nome já está em uso. Escolha outro.' }];
+    const profile = await store.profile(u.id); lobby.updateProfile(u.id, profile);
+    return [200, { profile }];
+  },
+  // troca de senha: confere a atual; as outras sessões (outros aparelhos) são encerradas
+  'POST /api/password': async (req, body, ip) => {
+    if (limited(ip)) return [429, { error: 'Muitas tentativas. Espere alguns minutos.' }];
+    const u = await authUser(req); if (!u) return [401, { error: 'Sessão expirada. Entre de novo.' }];
+    const cur = String(body.current || ''), pw = String(body.password || '');
+    if (!(await checkPassword(cur, await store.passHash(u.id)))) return [403, { error: 'A senha atual está incorreta.' }];
+    if (pw.length < 6 || pw.length > 72) return [400, { error: 'A nova senha precisa ter pelo menos 6 caracteres.' }];
+    await store.updateUser(u.id, { hash: await hashPassword(pw) });
+    const m = String(req.headers.authorization || '').match(/^Bearer ([a-f0-9]{64})$/);
+    await store.dropOtherSessions(u.id, tokenHash(m[1]));
+    lobby.closeOthers(u.id, m[1]);
+    return [200, { ok: true }];
   },
   'POST /api/progress': async (req, body) => {
     const u = await authUser(req); if (!u) return [401, { error: 'Sessão expirada. Entre de novo.' }];
@@ -212,6 +315,10 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+const lobby = createLobby(server, {
+  authenticate: token => authUser({ headers: { authorization: 'Bearer ' + token } }),
+  profile: id => store.profile(id),
+});
 store.init().then(() => {
   server.listen(PORT, process.env.HOST || '127.0.0.1', () => console.log(`API do Genésio em http://127.0.0.1:${PORT} (banco: ${store.kind}${STATIC_DIR ? ', servindo ' + STATIC_DIR : ''})`));
 }).catch(e => { console.error('Não consegui preparar o banco:', e.message); process.exit(1); });

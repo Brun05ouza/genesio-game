@@ -22,6 +22,19 @@ Se criar arquivos novos (imagens etc.), atualize antes a lista com `node build-t
 - Teclado: WASD/setas, Shift, Espaço, J/C/F no Solar, Esc pausa.
 - Celular (na horizontal): joystick e botões aparecem no lobby, Nature e Solar do Bosque.
 - Solar no celular: o botão **Lançar** é também a mira — toque rápido lança para a frente; segure e arraste para mirar (a distância é a força) e solte para lançar.
+- Solar do Bosque: escolha Fácil, Normal ou Difícil ao entrar pela placa. A dificuldade altera a vida, a resistência e o ritmo dos inimigos; as tentativas mantêm o modo escolhido. Recordes e ranking são separados por modo. O recorde antigo permanece no Normal.
+
+## Multiplayer no lobby
+
+Jogadores conectados à conta entram automaticamente no lobby online. O botão **Online** mostra quantos estão no mesmo mapa e permite ficar offline ou reconectar. Em **Configurações → Jogar offline**, escolha **Sim** para jogar sem entrar no multiplayer; a preferência fica salva no aparelho e também pode ser alterada pelo pause das fases. Lobby, Nova Iguaçu e Teresópolis têm presenças separadas; movimento, corrida, salto, nome e foto do perfil aparecem aos outros jogadores. Até 32 jogadores visíveis por mapa. As fases continuam individuais: ao entrar, o personagem sai da área compartilhada e reaparece ao retornar. Visitantes podem continuar jogando offline.
+
+Para rodar tudo localmente, use `node server/server.js --port 8000 --static ..` (configure o banco em `server/.env`, ou omita `DATABASE_URL` para um banco de teste em memória). Teste com duas contas em navegadores/perfis diferentes. Só o servidor de arquivos do Python não oferece multiplayer.
+
+Na VPS, atualize também `server/`, rode `npm ci` nessa pasta e reinicie o serviço `genesio-api`. O endpoint `/api/lobby` usa WebSocket no mesmo servidor da API; os blocos em `server/nginx-api.conf` e `server/nginx-site.conf` já incluem o encaminhamento necessário. A configuração precisa ser aplicada ao Nginx e validada com `nginx -t` antes de recarregar. Publicar somente `dist/` não atualiza o servidor multiplayer. As presenças são temporárias e usam um único processo de API; reiniciar o processo faz os clientes reconectarem.
+
+Se a API estiver em outro domínio, `window.GENESIO_API` deve apontar para a URL pública HTTPS da API antes de carregar os scripts. O cliente deriva dela a conexão segura do lobby.
+
+Teste automático (API com banco de teste): `node tests/multiplayer.test.cjs http://localhost:8012`.
 
 ## Conversa de boas-vindas
 Ao tocar em **Começar** (jogo novo) o Genésio aparece e conversa com a pessoa no estilo Pokémon FireRed: o texto surge aos poucos e se toca/clica (ou Enter/Espaço) para passar; **Pular** ou Esc encerram. O roteiro fica em `welcomeScript()` no `game.js`; o módulo é o `talk.js`. Teste: `node tests/talk.test.cjs`.

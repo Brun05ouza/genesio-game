@@ -135,6 +135,7 @@ const Climb = (() => {
   // ---- telas ----
   function hideOverlay() { clearInterval(timer); el('kOverlay').classList.remove('active'); }
   function showOverlay(kind) {
+    el('kSettings').hidden = kind !== 'pause';
     const m = meters();
     el('kTitle').textContent = kind === 'pause' ? 'Pausado' : 'Fim da subida';
     el('kConvert').style.display = kind === 'pause' ? 'none' : 'flex';

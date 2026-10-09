@@ -80,12 +80,14 @@ for (const [name, n] of Object.entries(ANIMS)) {
 const keys = {};
 const ARROW = { ArrowLeft: 'KeyA', ArrowRight: 'KeyD', ArrowUp: 'KeyW', ArrowDown: 'KeyS' };
 addEventListener('keydown', e => {
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.code === 'Escape' && state === 'login') show('menu'); return; }   // digitando (login): não vira comando do jogo
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.code === 'Escape' && state === 'login') show('menu'); else if (e.code === 'Escape' && state === 'profile') Profile.close(); else if (e.code === 'Escape' && state === 'settings') closeSettings(); return; }   // campos de formulário não viram comandos do jogo
   if (e.code === 'Escape') {
     if (state === 'talk') Talk.skip();
     else if (state === 'login') show('menu');
+    else if (state === 'profile') Profile.close();
+    else if (state === 'ranking') Ranking.close();
     else if (state === 'playing') openMenu();
-    else if (state === 'settings') show('menu');
+    else if (state === 'settings') closeSettings();
     else if (state === 'menu' && started) startGame();
     else if (state === 'runner') Runner.togglePause();
     else if (state === 'nplay') Nature.togglePause();
@@ -97,6 +99,7 @@ addEventListener('keydown', e => {
     else if (state === 'prompt') closePrompt();
     else if (state === 'oasis') backToMap();
     else if (state === 'difficulty') show('oasis');
+    else if (state === 'solarDifficulty') backToMap();
     return;
   }
   keys[e.code] = true;
@@ -302,39 +305,43 @@ function drawSign(sg) {
   ctx.restore();
 }
 
-function drawPlayer() {
-  SCREEN_X = VW / 2 + (player.wx - cam.x) * MAP_ZOOM;
-  SCREEN_Y = VH / 2 + (player.wy - cam.y) * MAP_ZOOM;
+function drawPlayer(actor = player) {
+  const sx = VW / 2 + (actor.wx - cam.x) * MAP_ZOOM, sy = VH / 2 + (actor.wy - cam.y) * MAP_ZOOM;
+  if (actor === player) { SCREEN_X = sx; SCREEN_Y = sy; }
+  if (sx < -220 || sx > VW + 220 || sy < -220 || sy > VH + 220) return;
   let anim, idx = 0;
-  if (player.z > 0 || player.vz > 0) {
+  if (actor.z > 0 || actor.vz > 0) {
     anim = 'jump';
     // subida: frames 0-2, pico 2, descida 3-4
-    const p = player.vz > 170 ? 1 : player.vz > -170 ? 2 : 3;
-    idx = player.z < 12 && player.vz > 0 ? 0 : player.z < 12 ? 4 : p;
-  } else if (player.moving) {
-    if (player.running) { anim = 'run'; idx = Math.floor(player.t * 17) % 13; }
-    else { anim = 'walk'; idx = Math.floor(player.t * 11) % 13; }
+    const p = actor.vz > 170 ? 1 : actor.vz > -170 ? 2 : 3;
+    idx = actor.z < 12 && actor.vz > 0 ? 0 : actor.z < 12 ? 4 : p;
+  } else if (actor.moving) {
+    if (actor.running) { anim = 'run'; idx = Math.floor(actor.t * 17) % 13; }
+    else { anim = 'walk'; idx = Math.floor(actor.t * 11) % 13; }
   } else {
     anim = 'idle';
   }
-  const img = frames[anim][idx];
+  let img = frames[anim][idx];
+  const outfit = actor !== player && actor.skin !== 'classico' ? Lobby.imageFor(actor) : null;
+  if (outfit?.complete && outfit.naturalWidth) img = outfit;
   const cs = LEVELS[levelId].charScale || 1;     // tamanho do Genésio em relação à fase
-  const sc = SCALE[anim] * CHAR_SCALE * cs;
+  const sc = img === outfit ? 105 * cs / img.height : SCALE[anim] * CHAR_SCALE * cs;
   const w = img.width * sc, h = img.height * sc;
-  const x = SCREEN_X - w / 2, y = SCREEN_Y - player.z - h;
+  const x = sx - w / 2, y = sy - actor.z - h;
   // sombra
-  const shrink = 1 - Math.min(player.z / 150, 0.5);
+  const shrink = 1 - Math.min(actor.z / 150, 0.5);
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.beginPath();
-  ctx.ellipse(SCREEN_X, SCREEN_Y - 4, 30 * cs * shrink, 8 * cs * shrink, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx, sy - 4, 30 * cs * shrink, 8 * cs * shrink, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.save();
   // só há frames virados para a direita: espelha ao ir para a esquerda
-  if (anim !== 'idle' && player.facing < 0) {
-    ctx.translate(SCREEN_X, 0); ctx.scale(-1, 1); ctx.translate(-SCREEN_X, 0);
+  if (anim !== 'idle' && actor.facing < 0) {
+    ctx.translate(sx, 0); ctx.scale(-1, 1); ctx.translate(-sx, 0);
   }
   ctx.drawImage(img, x, y, w, h);
   ctx.restore();
+  if (actor !== player) Lobby.drawName(actor, sx, y - 4);
 }
 
 function resize() {
@@ -353,6 +360,7 @@ function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05); last = now;
   ctx.clearRect(0, 0, VW, VH);
   if (ready) {
+    Lobby.update(dt);
     if (state === 'runner') {
       Runner.update(dt);
       Runner.draw(ctx);
@@ -372,7 +380,7 @@ function loop(now) {
       Flow.update(dt);
       Flow.draw(ctx);
     } else if (state === 'playing' || state === 'prompt' || state === 'talk') {
-      if (state === 'playing') { update(dt); checkOasisSign(); }
+      if (state === 'playing') { update(dt); checkOasisSign(); if (typeof Ranking !== 'undefined') Ranking.check(player, levelId); }
       if (talkFocus && state === 'talk') {                       // conversa mostrando um lugar: a câmera desliza até ele
         talkCam.x += (talkFocus.x - talkCam.x) * Math.min(1, dt * 3.2); talkCam.y += (talkFocus.y - talkCam.y) * Math.min(1, dt * 3.2);
       } else { talkCam.x += (player.wx - talkCam.x) * Math.min(1, dt * 6); talkCam.y += (player.wy - talkCam.y) * Math.min(1, dt * 6); if (state !== 'talk') { talkCam.x = player.wx; talkCam.y = player.wy; } }
@@ -382,11 +390,11 @@ function loop(now) {
       const signs = [
         ...SIGNS.filter(sg => sg.level === levelId).map(sg => ({ y: sg.y, draw: () => drawSign(sg) })),
         ...GATES.filter(gt => gt.level === levelId).map(gt => ({ y: gt.y, draw: () => drawGate(gt) })),
+        ...(levelId === 'praca' && typeof Ranking !== 'undefined' ? [{ y: Ranking.BOARD.y, draw: () => Ranking.draw(ctx, cam, MAP_ZOOM) }] : []),
       ];
-      for (const sg of signs) if (sg.y <= player.wy) sg.draw();
-      drawPlayer();
+      const actors = [...signs, ...Lobby.actors(), { y: player.wy, draw: () => drawPlayer() }].sort((a, b) => a.y - b.y);
+      for (const actor of actors) actor.draw();
       drawFront();
-      for (const sg of signs) if (sg.y > player.wy) sg.draw();
       if (talkFocus && state === 'talk') drawFocusArrow(talkFocus);     // por cima das placas
     } else {
       // fundo do menu: câmera passeando pelo mapa
@@ -404,9 +412,9 @@ let state = 'loading', started = false;
 function show(name) {
   if (name !== 'talk' && typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip();      // saiu da conversa por outro caminho (menu, etc.)
   state = name;
-  document.body.classList.toggle('on-login', name === 'login');
+  document.body.classList.toggle('on-login', name === 'login' || name === 'profile');
   if (typeof refreshProfileCard === 'function') refreshProfileCard();
-  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'nature', 'serra', 'iguacu', 'lvload', 'login']) $(id).classList.toggle('active', id === name);
+  for (const id of ['loading', 'menu', 'settings', 'desert', 'prompt', 'oasis', 'difficulty', 'solarDifficulty', 'nature', 'serra', 'iguacu', 'lvload', 'login', 'profile', 'ranking']) $(id).classList.toggle('active', id === name);
   if (name !== 'runner') $('rOverlay').classList.remove('active');
   if (name !== 'nplay') $('nOverlay').classList.remove('active');
   if (name !== 'kplay') $('kOverlay').classList.remove('active');
@@ -425,12 +433,127 @@ function refreshProfileCard() {
   if (!on) return;
   const nome = typeof Account !== 'undefined' && Account.user();
   $('pcName').textContent = nome || 'Visitante';
+  const pic = nome ? Account.picture() : 'assets/menu-g-a.png';
+  if (!$('pcPic').src.endsWith(pic)) $('pcPic').src = pic;
+  card.classList.toggle('guest', !nome);
   let coins = 0; try { coins = +localStorage.getItem('genesio-coins') || 0; } catch (e) {}
   $('pcCoins').textContent = coins.toLocaleString('pt-BR');
   $('acLogout').hidden = !(nome && state === 'menu');
   $('acLogin').hidden = !(!nome && state === 'menu');
 }
 setInterval(refreshProfileCard, 500);
+
+// ---- tela "Meu perfil" (abre ao tocar no cartão do jogador) ----
+const Profile = (() => {
+  const AV = ['a', 'b', 'c', 'd', 'e'];
+  // Clássico primeiro, profissões em seguida e coleção rara por último (em breve).
+  const SKINS = [
+    { id: 'classico', name: 'Clássico' },
+    { id: 'explorador', name: 'Explorador do Deserto', tier: 'rara', stat: 'oasis', min: 5000, need: 'Faça 5.000 pontos no Oásis' },
+    { id: 'cacto', name: 'Cacto', tier: 'rara', stat: 'genesio-nature-best-epi', min: 8, need: 'Pegue os 8 EPIs no Nature' },
+    { id: 'construtor', name: 'Construtor', tier: 'rara', stat: 'coins', min: 3000, need: 'Junte 3.000 GenesisCoins' },
+    { id: 'astronauta', name: 'Astronauta', tier: 'epica', stat: 'genesio-flow-best', min: 50, need: 'Passe 50 pilares no Flow' },
+    { id: 'neon', name: 'Neon Cibernético', tier: 'epica', stat: 'genesio-climb-best', min: 150, need: 'Suba 150 m na Torre' },
+    { id: 'ninja', name: 'Ninja', tier: 'epica', stat: 'genesio-solar-cleared', min: 1, need: 'Vença o Golem do Solar do Bosque' },
+    { id: 'dourado', name: 'Dourado', tier: 'lendaria', stat: 'coins', min: 20000, need: 'Junte 20.000 GenesisCoins' },
+    ...[['pedreiro', 'Pedreiro'], ['engenheiro', 'Engenheiro'], ['mestre', 'Mestre de obras'], ['eletricista', 'Eletricista'], ['encanador', 'Encanador'], ['pintor', 'Pintor'], ['seguranca', 'Segurança do trabalho'], ['operador', 'Operador']]
+      .map(([id, name]) => ({ id, name, soon: true })),
+  ].map(sk => sk.tier ? { ...sk, soon: true } : sk)
+    .sort((a, b) => Number(!!a.tier) - Number(!!b.tier));
+  const TIER = { rara: 'Rara', epica: 'Épica', lendaria: 'Lendária' };
+  const num = k => { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } };
+  const stat = st => st === 'coins' ? num('genesio-coins') : st === 'oasis' ? Math.max(num('genesio-best-facil'), num('genesio-best-normal'), num('genesio-best-dificil'))
+    : st === 'genesio-solar-cleared' ? (localStorage.getItem(st) === '1' ? 1 : 0) : num(st);
+  const unlocked = sk => !sk.soon && (!sk.min || stat(sk.stat) >= sk.min);
+  let back = 'menu', chosen = 'a', skin = 'classico';
+  const skinPic = s => s === 'classico' ? 'assets/menu-g-' + chosen + '.png' : 'assets/skins/' + s + '.png';
+  const msg = (id, t, ok) => { $(id).textContent = t; $(id).classList.toggle('ok', !!ok); };
+  function paint() {
+    $('pfPic').src = skinPic(skin);
+    for (const b of $('pfAvatars').children) { const on = b.dataset.av === chosen; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
+    for (const b of $('pfSkins').children) { const on = b.dataset.skin === skin; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
+  }
+  function open() {
+    if (typeof Account === 'undefined' || !Account.isLogged()) { Account.openLogin('Entre ou crie uma conta para personalizar seu perfil.'); return; }
+    back = state === 'playing' ? 'playing' : 'menu';
+    for (const k in keys) keys[k] = false;
+    chosen = Account.avatar(); skin = Account.skin(); buildSkins();
+    $('pfName').value = Account.user();
+    let coins = 0; try { coins = +localStorage.getItem('genesio-coins') || 0; } catch (e) {}
+    $('pfCoins').textContent = coins.toLocaleString('pt-BR');
+    for (const id of ['pfCur', 'pfNew', 'pfNew2']) $(id).value = '';
+    msg('pfMsg', ''); msg('pfPassMsg', ''); passBox(false);
+    paint(); show('profile'); document.querySelector('#profile .pf-body').scrollTop = 0;
+  }
+  function close() { show(back); }
+  function passBox(on) {
+    $('pfPassForm').hidden = !on; $('pfPassOpen').hidden = on;
+    if (on) { for (const id of ['pfCur', 'pfNew', 'pfNew2']) $(id).value = ''; msg('pfPassMsg', ''); setTimeout(() => $('pfCur').focus(), 30); }
+  }
+  $('pfPassOpen').addEventListener('click', () => { Sound.init(); Sound.click(); passBox(true); });
+  $('pfPassCancel').addEventListener('click', () => { Sound.init(); Sound.click(); passBox(false); });
+  for (const a of AV) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pf-av'; b.dataset.av = a; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', 'Foto ' + (AV.indexOf(a) + 1));
+    b.innerHTML = `<img src="assets/menu-g-${a}.png" alt="" draggable="false">`;
+    b.addEventListener('click', () => { Sound.init(); Sound.click(); chosen = a; skin = 'classico'; paint(); msg('pfMsg', 'Toque em "Salvar" para guardar a foto.', true); });
+    $('pfAvatars').appendChild(b);
+  }
+  function buildSkins() {
+    $('pfSkins').innerHTML = '';
+    for (const sk of SKINS) {
+      const b = document.createElement('button'), open = unlocked(sk);
+      b.type = 'button'; b.className = 'pf-skin' + (sk.tier ? ' t-' + sk.tier : '') + (open ? '' : sk.soon ? ' lock soon' : ' lock'); b.dataset.skin = sk.id; b.setAttribute('role', 'radio'); b.title = sk.name;
+      if (!open) b.setAttribute('aria-disabled', 'true');
+      const cur = sk.min ? Math.min(sk.min, stat(sk.stat)) : 0;
+      const rarity = sk.tier ? `<em class="pf-tier">${TIER[sk.tier]}</em>` : '';
+      const soon = sk.soon ? '<em class="pf-soon">🔒 Em breve</em>' : '';
+      const badge = sk.tier ? `<div class="pf-skin-status">${rarity}${soon}</div>` : soon;
+      const need = !open && sk.min ? `<small class="pf-need">${sk.need}</small>${sk.soon ? '' : `<i class="pf-bar"><i style="width:${Math.round(cur / sk.min * 100)}%"></i></i>`}` : '';
+      b.innerHTML = `${badge}<img src="assets/skins/${sk.id}.png" alt="" draggable="false"><span>${sk.name}</span>${need}`;
+      b.addEventListener('click', () => {
+        Sound.init(); Sound.click();
+        if (sk.soon) { msg('pfMsg', sk.name + ': chegando em breve!', true); return; }
+        if (!open) { msg('pfMsg', '🔒 ' + sk.name + ' (' + TIER[sk.tier] + '): ' + sk.need.toLowerCase() + ' para liberar.', true); return; }
+        skin = sk.id; paint(); msg('pfMsg', 'Toque em "Salvar" para vestir: ' + sk.name + '.', true);
+      });
+      $('pfSkins').appendChild(b);
+    }
+  }
+  $('pfNameForm').addEventListener('submit', async e => {
+    e.preventDefault(); Sound.init(); Sound.click();
+    const name = $('pfName').value.trim(), f = {};
+    if (name !== Account.user()) f.name = name;
+    if (chosen !== Account.avatar()) f.avatar = chosen;
+    if (skin !== Account.skin()) f.skin = skin;
+    if (!Object.keys(f).length) return msg('pfMsg', 'Nada para salvar.', true);
+    if (f.name !== undefined && name.length < 3) return msg('pfMsg', 'O nome precisa ter pelo menos 3 letras.');
+    $('pfSave').disabled = true; msg('pfMsg', 'Salvando...', true);
+    const r = await Account.updateProfile(f);
+    $('pfSave').disabled = false;
+    if (r.ok) { msg('pfMsg', 'Perfil salvo! ✓', true); $('pfName').value = Account.user(); refreshProfileCard(); }
+    else msg('pfMsg', r.error);
+  });
+  $('pfPassForm').addEventListener('submit', async e => {
+    e.preventDefault(); Sound.init(); Sound.click();
+    const cur = $('pfCur').value, pw = $('pfNew').value;
+    if (!cur) return msg('pfPassMsg', 'Digite sua senha atual.');
+    if (pw.length < 6) return msg('pfPassMsg', 'A nova senha precisa ter pelo menos 6 caracteres.');
+    if (pw !== $('pfNew2').value) return msg('pfPassMsg', 'As duas senhas novas não são iguais.');
+    $('pfPassBtn').disabled = true; msg('pfPassMsg', 'Trocando...', true);
+    const r = await Account.changePassword(cur, pw);
+    $('pfPassBtn').disabled = false;
+    if (r.ok) { passBox(false); msg('pfMsg', 'Senha alterada! Os outros aparelhos vão pedir para entrar de novo.', true); }
+    else msg('pfPassMsg', r.error);
+  });
+  $('pfBack').addEventListener('click', () => { Sound.init(); Sound.click(); close(); });
+  $('pfLogout').addEventListener('click', () => Account.logout());
+  document.querySelector('#profile [data-pf="back"]').addEventListener('click', () => { Sound.init(); Sound.click(); close(); });
+  const card = $('profileCard');
+  card.addEventListener('click', e => { if (e.target.closest('button')) return; Sound.init(); Sound.click(); open(); });
+  card.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); open(); } });
+  return { open, close };
+})();
 function welcomeScript() {
   const touch = document.body.classList.contains('touch');
   const nome = typeof Account !== 'undefined' && Account.user();
@@ -459,6 +582,25 @@ function startGame() {
 }
 function openMenu() { show('menu'); }
 
+// Configurações lembram a pausa de origem sem reiniciar ou retomar a fase.
+let settingsReturn = { state: 'menu', overlay: null, focus: 'btnSettings' };
+function openSettings(source) {
+  settingsReturn = {
+    state,
+    overlay: document.querySelector('[id$="Overlay"].active')?.id || null,
+    focus: source?.id || 'btnSettings',
+  };
+  for (const k in keys) keys[k] = false;
+  show('settings');
+  $('volMusic').focus();
+}
+function closeSettings() {
+  for (const k in keys) keys[k] = false;
+  show(settingsReturn.state);
+  if (settingsReturn.overlay) $(settingsReturn.overlay).classList.add('active');
+  $(settingsReturn.focus)?.focus();
+}
+
 function syncAudioUI() {
   const S = Sound.S;
   for (const id of ['btnMusic', 'muteMusic']) $(id).classList.toggle('off', S.muteMusic);
@@ -469,8 +611,9 @@ function syncAudioUI() {
 syncAudioUI();
 const click = (id, fn) => $(id).addEventListener('click', () => { Sound.init(); Sound.click(); document.activeElement.blur(); fn(); });
 click('btnStart', startGame);
-click('btnSettings', () => show('settings'));
-click('btnBack', () => show('menu'));
+click('btnSettings', () => openSettings($('btnSettings')));
+click('btnBack', closeSettings);
+document.querySelectorAll('[data-pause-settings]').forEach(b => click(b.id, () => openSettings(b)));
 click('btnPause', () => state === 'runner' ? Runner.togglePause() : state === 'nplay' ? Nature.togglePause() : state === 'kplay' ? Climb.togglePause() : state === 'hplay' ? Hop.togglePause() : state === 'splay' ? Solar.togglePause() : state === 'fplay' ? Flow.togglePause() : openMenu());
 for (const id of ['btnMusic', 'muteMusic']) click(id, () => { Sound.startMusic(); Sound.toggleMusic(); syncAudioUI(); });
 for (const id of ['btnSfx', 'muteSfx']) click(id, () => { Sound.toggleSfx(); syncAudioUI(); });
@@ -565,14 +708,22 @@ function clickSign(sg) {
   Sound.init(); Sound.click();
   openPrompt(signKind(sg));
 }
-$('c').addEventListener('click', e => { const sg = signAtClient(e.clientX, e.clientY); if (sg) clickSign(sg); });
+// quadro do ranking (lobby): toque/clique abre a tela
+function boardAtClient(cx, cy) {
+  if (state !== 'playing' || levelId !== 'praca' || typeof Ranking === 'undefined') return false;
+  const r = $('c').getBoundingClientRect();
+  return Ranking.hit((cx - r.left) * VW / r.width, (cy - r.top) * VH / r.height, cam, MAP_ZOOM);
+}
+function openBoard() { Sound.init(); Sound.click(); Ranking.block(); Ranking.open(); }
+$('c').addEventListener('click', e => { if (boardAtClient(e.clientX, e.clientY)) return openBoard(); const sg = signAtClient(e.clientX, e.clientY); if (sg) clickSign(sg); });
 $('c').addEventListener('pointermove', e => {
   if (e.pointerType === 'touch') return;
   hoverSign = signAtClient(e.clientX, e.clientY);
-  $('c').style.cursor = hoverSign ? 'pointer' : '';
+  const onBoard = boardAtClient(e.clientX, e.clientY); if (typeof Ranking !== 'undefined') Ranking.setHover(onBoard);
+  $('c').style.cursor = hoverSign || onBoard ? 'pointer' : '';
 });
 $('c').addEventListener('pointerleave', () => { hoverSign = null; $('c').style.cursor = ''; });
-window.worldTap = (cx, cy) => { const sg = signAtClient(cx, cy); if (sg) clickSign(sg); };     // toque curto vindo da área do joystick (touch.js)
+window.worldTap = (cx, cy) => { if (boardAtClient(cx, cy)) return openBoard(); const sg = signAtClient(cx, cy); if (sg) clickSign(sg); };     // toque curto vindo da área do joystick (touch.js)
 
 function openPrompt(kind) {
   promptKind = kind;
@@ -618,7 +769,7 @@ async function beginRun(diff) {
 }
 function exitRunner() { Runner.stop(); promptBlocked = true; show('playing'); }
 
-click('btnYes', () => { if (promptKind === 'flow') beginFlow(); else if (promptKind === 'solar') beginSolar(); else if (promptKind === 'nature') openNature(); else show('oasis'); });
+click('btnYes', () => { if (promptKind === 'flow') beginFlow(); else if (promptKind === 'solar') openSolarDifficulty(); else if (promptKind === 'nature') openNature(); else show('oasis'); });
 click('btnNo', closePrompt);
 click('btnOasisStart', () => { refreshBests(); show('difficulty'); });
 click('btnOasisBack', backToMap);
@@ -653,10 +804,22 @@ click('hPrimary', () => Hop.primary());
 click('hChallenges', () => { Hop.stop(); openNature(); });
 click('hExit', () => { Hop.stop(); promptBlocked = true; show('playing'); });
 
-// Solar do Bosque: a saída só libera depois da animação de morte do golem.
-async function beginSolar() {
+// Solar do Bosque: dificuldade escolhida antes do carregamento, preservada nas tentativas.
+function openSolarDifficulty() {
+  for (const d of Object.values(Solar.DIFFS)) {
+    const score = Solar.best(d.key);
+    $('solar-best-' + d.key).textContent = score ? `Recorde: ${score.toLocaleString('pt-BR')} pts` : 'Sem recorde ainda';
+  }
+  for (const k in keys) keys[k] = false;
+  show('solarDifficulty');
+  document.querySelector('[data-solar-diff="normal"]').focus({ preventScroll: true });
+}
+click('btnSolarDiffBack', backToMap);
+document.querySelectorAll('[data-solar-diff]').forEach(b => click(b.id, () => beginSolar(b.dataset.solarDiff)));
+async function beginSolar(diff = 'normal') {
   if (state === 'lvload') return;
-  await loadWithScreen('Solar do Bosque', () => Solar.start(), () => show('splay'), () => backToMap());
+  const mode = Solar.DIFFS[diff] || Solar.DIFFS.normal;
+  await loadWithScreen('Solar do Bosque · ' + mode.name, () => Solar.start(mode.key), () => show('splay'), openSolarDifficulty);
 }
 click('sPrimary', () => { for (const k in keys) keys[k] = false; Solar.primary(); });
 click('sRestart', () => { for (const k in keys) keys[k] = false; Solar.restartAll(); });

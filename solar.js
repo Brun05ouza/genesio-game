@@ -7,7 +7,14 @@ const Solar = (() => {
   const GRAV = 2500, JUMP = 1060, WALK = 360;
   const DODGE_TIME = .32, DODGE_COOLDOWN = .85, DODGE_GRACE = .14;   // imune durante o dash e mais um instante depois dele
   const CHARGE_DELAY = .22, CHARGE_FULL = 1.1;
-  const MAXHP = 5, BOSS_HP = 40, GS = 1.15, BS = 2.0, REWARD = 150, COIN_VALUE = 2;
+  const GS = 1.15, BS = 2.0, COIN_VALUE = 2;
+  // Normal preserva o combate original; os avisos continuam legíveis em todos os modos.
+  const DIFFS = Object.freeze({
+    facil: Object.freeze({ key: 'facil', name: 'Fácil', hp: 7, bossHp: 28, rockHp: 1, flyHp: 1, speed: .8, wind: 1.35, rest: 1.35, invul: 1.8, swingDamage: 1, debris: 4, reward: 100 }),
+    normal: Object.freeze({ key: 'normal', name: 'Normal', hp: 5, bossHp: 40, rockHp: 2, flyHp: 1, speed: 1, wind: 1, rest: 1, invul: 1.5, swingDamage: 2, debris: 6, reward: 150 }),
+    dificil: Object.freeze({ key: 'dificil', name: 'Difícil', hp: 4, bossHp: 56, rockHp: 3, flyHp: 2, speed: 1.2, wind: .8, rest: .8, invul: 1.1, swingDamage: 2, debris: 8, reward: 225 }),
+  });
+  let diff = DIFFS.normal;
   const ARENA_X = (NIMG - 1) * PITCH, ARENA_TRIGGER = ARENA_X + 300, CAM_ARENA = WORLD_W - VIEW_W;
   const M = { hm: { w: 230, h: 166, ax: 101, ay: 154 }, hh: { w: 182, h: 127, ax: 95, ay: 124 }, gb: { w: 445, h: 297, ax: 170, ay: 240 } };
   M.run = { ax: 95, ay: 154 };
@@ -125,6 +132,10 @@ const Solar = (() => {
   const addCoins = n => { try { localStorage.setItem(COINS_KEY, getCoins() + n); } catch (e) {} };
   const cleared = () => { try { return localStorage.getItem('genesio-solar-cleared') === '1'; } catch (e) { return false; } };
   const markCleared = () => { try { localStorage.setItem('genesio-solar-cleared', '1'); } catch (e) {} };
+  // pontos da partida para o ranking: mobs derrotados x10 + 500 por vencer o Golem + 100 por coração restante
+  const runScore = won => g.kills * 10 + (won ? 500 + Math.max(0, g.hp) * 100 : 0);
+  const best = (key = 'normal') => { try { return Math.max(+localStorage.getItem('genesio-solar-best-' + key) || 0, key === 'normal' ? +localStorage.getItem('genesio-solar-best') || 0 : 0); } catch (e) { return 0; } };
+  const saveBest = won => { try { const s = runScore(won); if (s > best(diff.key)) localStorage.setItem('genesio-solar-best-' + diff.key, s); if (diff.key === 'normal' && s > (+localStorage.getItem('genesio-solar-best') || 0)) localStorage.setItem('genesio-solar-best', s); } catch (e) {} };
 
   // ---- mundo ----
   const rng = seed => () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -142,8 +153,8 @@ const Solar = (() => {
 
   function buildMobs() {
     const mobs = [], r = rng(77);
-    const rock = (x, plat) => mobs.push({ type: 'rock', x, y: plat.y, plat, hp: 2, dir: r() < .5 ? -1 : 1, vx: 0, t: r() * 5, stun: 0, flash: 0, dead: false, mode: 'patrol', stride: r() * 6, lunge: 0, windT: 0, cdAtk: 1 + r() * 2, hitT: 0, squash: 0, spawnT: 0 });
-    const fly = (x, y) => mobs.push({ type: 'fly', x, y, hx: x, hy: y, hp: 1, st: 'hover', t: r() * 6, cd: 1 + r() * 2, tx: 0, ty: 0, flash: 0, dead: false, dive: 0, wind: 0, vx: 0, vy: 0, bank: 0, hitT: 0 });
+    const rock = (x, plat) => mobs.push({ type: 'rock', x, y: plat.y, plat, hp: diff.rockHp, dir: r() < .5 ? -1 : 1, vx: 0, t: r() * 5, stun: 0, flash: 0, dead: false, mode: 'patrol', stride: r() * 6, lunge: 0, windT: 0, cdAtk: (1 + r() * 2) * diff.rest, hitT: 0, squash: 0, spawnT: 0 });
+    const fly = (x, y) => mobs.push({ type: 'fly', x, y, hx: x, hy: y, hp: diff.flyHp, st: 'hover', t: r() * 6, cd: (1 + r() * 2) * diff.rest, tx: 0, ty: 0, flash: 0, dead: false, dive: 0, wind: 0, vx: 0, vy: 0, bank: 0, hitT: 0 });
     const groundX = [[900, 1300], [450, 850, 1250], [500, 900, 1300], [350, 650, 950, 1300]];
     const platRocks = [[2], [1, 6, 9], [1, 4, 8], [3, 6, 9, 12]];
     const flyers = [[[700, 600], [1200, 520]], [[650, 560], [1100, 500], [1450, 600]], [[600, 520], [950, 600], [1350, 480]], [[500, 500], [900, 560], [1200, 480], [1450, 540]]];
@@ -167,7 +178,7 @@ const Solar = (() => {
     const arena = !!(g && g.arenaReached) && fromCheckpoint;
     g = {
       x: arena ? ARENA_X + 330 : 150, y: GY, vx: 0, vy: 0, face: 1, plat: PLATS[0], coyote: 0, jbuf: 0, jhold: false, drop: null, dropT: 0,
-      hp: MAXHP, invul: 0, hurtT: 0, dead: false, deadT: 0, atk: null, atkQ: false, combo: 0, comboT: 0, atkHeld: false, animT: 0,
+      diff, hp: diff.hp, invul: 0, hurtT: 0, dead: false, deadT: 0, atk: null, atkQ: false, combo: 0, comboT: 0, atkHeld: false, animT: 0,
       stumble: 0, kx: 0,
       stride: 0, runBlend: 0, lean: 0, landT: 0, jumpT: 0, charge: null, throwHeld: false, throwT: 0, hammer: null, dodge: null, dodgeCd: 0, dodgeHeld: false, trails: [], dodgeGrace: 0,
       cam: arena ? CAM_ARENA : 0, camLock: arena, shake: 0, flash: 0, hitstop: 0,
@@ -179,23 +190,24 @@ const Solar = (() => {
     pointerAttack = false; pointerTap = false;
     hideOverlay();
   }
-  async function start() { await load(); newGame(false); running = true; }
+  async function start(key = 'normal') { await load(); diff = DIFFS[key] || DIFFS.normal; newGame(false); running = true; }
   function stop() { running = false; if (typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip(); hideOverlay(); unload(); }
   // libera as imagens da fase ao sair (no celular várias fases abertas em sequência estouravam a memória)
   function unload() { imgs = null; loading = null; }
   // sair no meio da fase: guarda as moedas dos mobs derrotados (uma vez) e fecha a fase
-  function leave() { if (g && !g.ended) { g.ended = true; addCoins(g.kills * COIN_VALUE); } stop(); }
+  function leave() { if (g && !g.ended) { g.ended = true; addCoins(g.kills * COIN_VALUE); saveBest(false); } stop(); }
 
   // ---- telas ----
   function hideOverlay() { el('sOverlay').classList.remove('active'); }
   function showOverlay(kind) {
-    const coins = g.kills * COIN_VALUE + (kind === 'win' ? REWARD : 0);
+    el('sSettings').hidden = kind !== 'pause';
+    const coins = g.kills * COIN_VALUE + (kind === 'win' ? diff.reward : 0);
     el('sTitle').textContent = kind === 'pause' ? 'Pausado' : kind === 'win' ? 'Fase concluída! 🏆' : 'Você caiu!';
-    el('sInfo').innerHTML = kind === 'pause'
-      ? `Vidas: <b>${g.hp}/${MAXHP}</b> · Mobs derrotados: <b>${g.kills}</b>${g.boss && g.boss.state !== 'dead' && g.bossBar > .5 ? `<br>Golem: <b>${Math.max(0, Math.ceil(g.boss.hp))}/${BOSS_HP}</b>` : ''}`
+    el('sInfo').innerHTML = `<b>${diff.name}</b><br>` + (kind === 'pause'
+      ? `Vidas: <b>${g.hp}/${diff.hp}</b> · Mobs derrotados: <b>${g.kills}</b>${g.boss && g.boss.st !== 'dead' && g.bossBar > .5 ? `<br>Golem: <b>${Math.max(0, Math.ceil(g.boss.hp))}/${diff.bossHp}</b>` : ''}`
       : kind === 'win'
-        ? `O Golem Demolidor foi derrotado!<br>Mobs derrotados: <b>${g.kills}</b><br>🪙 <b>+${coins} GenesisCoins</b> <small>(${g.kills} × ${COIN_VALUE} + ${REWARD} do boss)</small>`
-        : `${g.arenaReached ? 'O Golem ainda está de pé.' : 'O bosque não é fácil.'}<br>Mobs derrotados: <b>${g.kills}</b>${g.kills ? `<br>🪙 <b>+${g.kills * COIN_VALUE} GenesisCoins</b>` : ''}`;
+        ? `O Golem Demolidor foi derrotado!<br>Mobs derrotados: <b>${g.kills}</b> · Pontos: <b>${runScore(true)}</b><br>🪙 <b>+${coins} GenesisCoins</b> <small>(${g.kills} × ${COIN_VALUE} + ${diff.reward} do boss)</small>`
+        : `${g.arenaReached ? 'O Golem ainda está de pé.' : 'O bosque não é fácil.'}<br>Mobs derrotados: <b>${g.kills}</b> · Pontos: <b>${runScore(false)}</b>${g.kills ? `<br>🪙 <b>+${g.kills * COIN_VALUE} GenesisCoins</b>` : ''}`);
     el('sPrimary').textContent = kind === 'pause' ? 'Continuar' : kind === 'win' ? 'Jogar de novo' : (g.arenaReached ? 'Lutar de novo' : 'Tentar de novo');
     el('sPrimary').dataset.kind = kind;
     el('sRestart').hidden = !(kind === 'lose' && g.arenaReached);
@@ -239,7 +251,7 @@ const Solar = (() => {
     cancelAttackInput();
     const dir = g.x >= srcX ? 1 : -1;
     if (g.hp <= 0) { g.hp = 0; g.dead = true; g.deadT = 0; g.vx = 220 * dir; g.vy = -520; g.plat = null; Sound.die(); return; }
-    g.hurtT = 0.45; g.invul = 1.5; g.vx = 340 * dir; g.vy = -480; g.plat = null;
+    g.hurtT = 0.45; g.invul = diff.invul; g.vx = 340 * dir; g.vy = -480; g.plat = null;
   }
 
   // ---- ataque do martelo ----
@@ -384,9 +396,9 @@ const Solar = (() => {
     g.atkQ = false; g.mobs.length = 0;
     // A última imagem vira uma arena fechada até a vitória.
     burst(g.wallL, GY, 26, 'rock'); dust(g.wallL, GY, 10, 1.3);
-    g.heal = { t: 0, need: MAXHP - g.hp, filled: 0, done: false, dur: MAXHP - g.hp > 0 ? .55 + (MAXHP - g.hp) * .32 + .9 : .7 };   // o Genésio recupera toda a vida antes do golem cair
+    g.heal = { t: 0, need: diff.hp - g.hp, filled: 0, done: false, dur: diff.hp - g.hp > 0 ? .55 + (diff.hp - g.hp) * .32 + .9 : .7 };   // o Genésio recupera toda a vida antes do golem cair
     g.pulse = {};
-    g.boss = { x: CAM_ARENA + VIEW_W - 340, y: -520, face: -1, hp: BOSS_HP, st: 'pre', t: 0, fr: 15, flash: 0, vy: 0, acd: 1, last: '', p2: false, hitFx: 0, vx: 0, tx: 0, rec: 0, sq: 0, hurtV: 0, ghosts: [], walk: 0, slow: 0, prev: 0 };
+    g.boss = { x: CAM_ARENA + VIEW_W - 340, y: -520, face: -1, hp: diff.bossHp, st: 'pre', t: 0, fr: 15, flash: 0, vy: 0, acd: 1, last: '', p2: false, hitFx: 0, vx: 0, tx: 0, rec: 0, sq: 0, hurtV: 0, ghosts: [], walk: 0, slow: 0, prev: 0 };
     g.bossBar = 0; g.titleT = -1; g.introSkip = false;
   }
   const B = () => g.boss;
@@ -403,7 +415,7 @@ const Solar = (() => {
   }
   // duração do aviso de cada golpe (antes do golpe sair) e do descanso depois dele
   const WIND = { punchW: .85, swingW: 1.2, stompW: .65 };
-  const windDur = (st, p2) => WIND[st] * (p2 ? .8 : 1);
+  const windDur = (st, p2) => WIND[st] * (p2 ? .8 : 1) * diff.wind;
   function wave(x, dir, speed, h = 80) { g.waves.push({ x, dir, v: speed, h, t: 0, life: 1.9 }); }
   function bossLand(big) {
     const b = B(); b.sq = big ? 1 : .55; Sound.smash(); doShake(big ? 30 : 16); g.flash = big ? .5 : .2;
@@ -439,18 +451,18 @@ const Solar = (() => {
         b.fr = 12; doShake(11 + 5 * Math.sin(b.t * 34));
         if (Math.random() < dt * 40) g.parts.push({ k: 'dirt', x: g.cam + rnd(0, VIEW_W), y: -10, vx: rnd(-30, 30), vy: rnd(200, 520), life: 1.6, t: 0, s: rnd(5, 12), rot: rnd(0, 6), vr: rnd(-8, 8), c: Math.floor(rnd(0, 3)) });
         if (b.t > 2.3) {
-          const go = () => { b.st = 'idle'; b.t = 0; g.phase = 'fight'; b.acd = 1.5; g.stumble = 0; };
+          const go = () => { b.st = 'idle'; b.t = 0; g.phase = 'fight'; b.acd = 1.5 * diff.rest; g.stumble = 0; };
           if (!g.arenaRetry && !g.introTalked) { g.introTalked = true; say('intro', go); } else go();     // ao lutar de novo não repete a conversa
         }
         break;
       case 'p2roar':
         b.fr = 12; doShake(10 + 4 * Math.sin(b.t * 34)); b.flash = 0.05;
         if (Math.random() < dt * 40) g.parts.push({ k: 'dirt', x: g.cam + rnd(0, VIEW_W), y: -10, vx: rnd(-30, 30), vy: rnd(200, 520), life: 1.6, t: 0, s: rnd(5, 12), rot: rnd(0, 6), vr: rnd(-8, 8), c: Math.floor(rnd(0, 3)) });
-        if (b.t > 1.6) { b.st = 'idle'; b.t = 0; b.acd = 1.0; }
+        if (b.t > 1.6) { b.st = 'idle'; b.t = 0; b.acd = diff.rest; }
         break;
       case 'idle': {
         b.face = g.x < b.x ? -1 : 1;
-        const dist = Math.abs(g.x - b.x), sp = b.p2 ? 150 : 110;
+        const dist = Math.abs(g.x - b.x), sp = (b.p2 ? 150 : 110) * diff.speed;
         if (dist > 150 && !g.dead) b.x += b.face * sp * dt;
         b.x = Math.max(wl, Math.min(wr, b.x));
         b.fr = dist > 150 ? 2 + Math.floor(b.t * 8) % 4 : (Math.floor(b.t * 2) % 2);
@@ -470,14 +482,14 @@ const Solar = (() => {
       case 'punch':
         b.fr = 7; { const f = b.face; const hb = { x0: b.x + Math.min(30 * f, 340 * f), x1: b.x + Math.max(30 * f, 340 * f), y0: GY - 300, y1: GY - 20 };
           if (b.t < 0.22 && overlap(pBox(), hb)) hurtPlayer(1, b.x); }
-        if (b.t > 0.3) { b.st = 'rec'; b.t = 0; b.rec = b.p2 ? 0.85 : 1.1; }
+        if (b.t > 0.3) { b.st = 'rec'; b.t = 0; b.rec = (b.p2 ? 0.85 : 1.1) * diff.rest; }
         break;
       case 'swingW': b.fr = 6; if (b.t > windDur('swingW', b.p2)) { b.st = 'swing'; b.t = 0; Sound.swing(); } break;
       case 'swing':
         b.fr = b.t < 0.17 ? 8 : 9;
         { const f = b.face; const hb = { x0: b.x + Math.min(-30 * f, 680 * f), x1: b.x + Math.max(-30 * f, 680 * f), y0: GY - 300, y1: GY - 30 };
-          if (b.t < 0.42 && overlap(pBox(), hb)) hurtPlayer(2, b.x); }
-        if (b.t > 0.5) { b.st = 'rec'; b.t = 0; b.rec = b.p2 ? 1.2 : 1.6; }
+          if (b.t < 0.42 && overlap(pBox(), hb)) hurtPlayer(diff.swingDamage, b.x); }
+        if (b.t > 0.5) { b.st = 'rec'; b.t = 0; b.rec = (b.p2 ? 1.2 : 1.6) * diff.rest; }
         break;
       case 'stompW': b.fr = 14; if (b.t > windDur('stompW', b.p2)) { b.st = 'stompJ'; b.t = 0; b.vy = -1450; b.tx = Math.max(wl, Math.min(wr, g.x)); b.vx = (b.tx - b.x) / (2 * 1450 / 3400); Sound.jump(); } break;
       case 'stompJ':
@@ -485,11 +497,11 @@ const Solar = (() => {
         if (b.y >= GY && b.vy > 0) {
           b.y = GY; b.vy = 0; b.st = 'stompL'; b.t = 0; bossLand(true);
           if (Math.abs(g.x - b.x) < 200 && g.y > GY - 120) hurtPlayer(1, b.x);
-          if (b.p2) spawnDebris(6);              // sem onda de terra: o pouso só machuca quem está embaixo
+          if (b.p2) spawnDebris(diff.debris);     // sem onda de terra: o pouso só machuca quem está embaixo
         }
         break;
-      case 'stompL': b.fr = 16; if (b.t > 0.6) { b.st = 'rec'; b.t = 0; b.rec = b.p2 ? 1.1 : 1.5; } break;
-      case 'rec': b.fr = 17; if (b.t > b.rec) { b.st = 'idle'; b.t = 0; b.acd = b.p2 ? rnd(0.8, 1.3) : rnd(1.2, 2.0); } break;
+      case 'stompL': b.fr = 16; if (b.t > 0.6) { b.st = 'rec'; b.t = 0; b.rec = (b.p2 ? 1.1 : 1.5) * diff.rest; } break;
+      case 'rec': b.fr = 17; if (b.t > b.rec) { b.st = 'idle'; b.t = 0; b.acd = (b.p2 ? rnd(0.8, 1.3) : rnd(1.2, 2.0)) * diff.rest; } break;
       case 'dead':
         b.fr = b.t < 0.5 ? 13 : b.t < 1.7 ? 18 : 19;
         if (b.t < .08 && !b.slow) { b.slow = 1; g.hitstop = .22; }                // pausa dramática no golpe final
@@ -509,7 +521,7 @@ const Solar = (() => {
       b.x = Math.max(wl - 40, Math.min(wr + 40, b.x));
     }
   }
-  function spawnDebris(n) { for (let i = 0; i < n; i++) g.debris.push({ x: rnd(g.wallL + 60, g.wallR - 60), y: -140, vy: 0, warn: 0.9 + i * 0.12, t: 0, st: 'warn' }); }
+  function spawnDebris(n) { for (let i = 0; i < n; i++) g.debris.push({ x: rnd(g.wallL + 60, g.wallR - 60), y: -140, vy: 0, warn: (0.9 + i * 0.12) * diff.wind, t: 0, st: 'warn' }); }
 
   function damageBoss(n, fromRain) {
     const b = B();
@@ -519,20 +531,20 @@ const Solar = (() => {
     popup('-' + (+n.toFixed(1)), b.x + rnd(-40, 40), GY - 340, '#ffe58a');
     if (b.hp <= 0) { b.hp = 0; b.st = 'dead'; b.t = 0; b.y = GY; b.vy = 0; g.waves.length = 0; g.debris.length = 0; doShake(32); g.flash = .7; Sound.smash(); return true; }
     if (fromRain) return true;                       // durante a chuva o boss continua atordoado; a fúria vem no fim
-    if (!b.p2 && b.hp <= BOSS_HP / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; g.waves.length = 0; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); say('fury'); return true; }
+    if (!b.p2 && b.hp <= diff.bossHp / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; g.waves.length = 0; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); say('fury'); return true; }
     if (b.st === 'idle') { b.st = 'hit'; b.t = 0; }
     return true;
   }
 
   function win() {
     g.ended = true; g.phase = 'win';
-    const total = g.kills * COIN_VALUE + REWARD;
-    addCoins(total); markCleared(); Sound.power();
+    const total = g.kills * COIN_VALUE + diff.reward;
+    addCoins(total); markCleared(); Sound.power(); saveBest(true);
     showOverlay('win');
   }
   function lose() {
     g.ended = true; g.rain = null;
-    addCoins(g.kills * COIN_VALUE);
+    addCoins(g.kills * COIN_VALUE); saveBest(false);
     showOverlay('lose');
   }
 
@@ -574,8 +586,8 @@ const Solar = (() => {
     if (b.st === 'dead') { g.rain = null; return; }
     if (r.t >= RAIN_DUR && r.hammers.every(h => h.st === 'done')) {
       g.rain = null; g.invul = Math.max(g.invul, .8);
-      if (!b.p2 && b.hp <= BOSS_HP / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); say('fury'); }
-      else { b.st = 'idle'; b.t = 0; b.acd = 1.2; }
+      if (!b.p2 && b.hp <= diff.bossHp / 2) { b.p2 = true; b.st = 'p2roar'; b.t = 0; Sound.roar(); g.flash = .4; popup('FÚRIA!', b.x, GY - 380, '#ff9a8a'); say('fury'); }
+      else { b.st = 'idle'; b.t = 0; b.acd = 1.2 * diff.rest; }
     }
   }
 
@@ -601,21 +613,21 @@ const Solar = (() => {
           m.windT -= dt; m.dir = px > m.x ? 1 : -1;
           if (m.windT <= 0) { m.mode = 'lunge'; m.lunge = .34; Sound.swing(); dust(m.x, m.y, 4, .5); }
         } else if (m.mode === 'lunge') {                       // bote rápido em direção ao Genésio
-          m.lunge -= dt; m.x += m.dir * 430 * dt;
+          m.lunge -= dt; m.x += m.dir * 430 * diff.speed * dt;
           const lo = m.plat.x0 + 28, hi = m.plat.x1 - 28; m.x = Math.max(lo, Math.min(hi, m.x));
           if (Math.random() < dt * 30) dust(m.x - m.dir * 30, m.y, 1, .5);
-          if (m.lunge <= 0) { m.mode = 'rest'; m.windT = .55; }
+          if (m.lunge <= 0) { m.mode = 'rest'; m.windT = .55 * diff.rest; }
         } else if (m.mode === 'rest') {                        // ofega depois do bote
-          m.windT -= dt; if (m.windT <= 0) { m.mode = 'patrol'; m.cdAtk = 1.6 + Math.random() * 1.6; }
+          m.windT -= dt; if (m.windT <= 0) { m.mode = 'patrol'; m.cdAtk = (1.6 + Math.random() * 1.6) * diff.rest; }
         } else {
           m.mode = 'patrol';
-          const sp = see ? 120 : 58;
+          const sp = (see ? 120 : 58) * diff.speed;
           m.dir = see ? (px > m.x ? 1 : -1) : m.dir;
           m.x += m.dir * sp * dt; m.stride += sp * dt / 120;
           const lo = m.plat.x0 + 28, hi = m.plat.x1 - 28;
           if (m.x < lo) { m.x = lo; m.dir = 1; } else if (m.x > hi) { m.x = hi; m.dir = -1; }
           m.cdAtk -= dt;
-          if (see && dist < 330 && dist > 120 && m.cdAtk <= 0) { m.mode = 'wind'; m.windT = .5; }
+          if (see && dist < 330 && dist > 120 && m.cdAtk <= 0) { m.mode = 'wind'; m.windT = .5 * diff.wind; }
         }
         if (overlap(pBox(), { x0: m.x - 38, x1: m.x + 38, y0: m.y - 88, y1: m.y })) hurtPlayer(1, m.x);
       } else {
@@ -623,20 +635,20 @@ const Solar = (() => {
         if (m.st === 'hover') {
           m.x = m.hx + Math.sin(m.t * 1.1) * 70; m.y = m.hy + Math.sin(m.t * 2.3) * 16;
           m.cd -= dt;
-          if (m.cd <= 0 && Math.abs(m.x - px) < 420 && !g.dead) { m.st = 'wind'; m.wind = .42; m.tx = px; m.ty = py - 55; Sound.swing(); }
+          if (m.cd <= 0 && Math.abs(m.x - px) < 420 && !g.dead) { m.st = 'wind'; m.wind = .42 * diff.wind; m.tx = px; m.ty = py - 55; Sound.swing(); }
         } else if (m.st === 'wind') {                          // recua e vibra antes de mergulhar
           m.wind -= dt; m.tx = px; m.ty = py - 55;
           const away = m.x < px ? -1 : 1; m.x += away * 90 * dt; m.y -= 55 * dt;
           if (m.wind <= 0) { m.st = 'dive'; m.dive = 0; }
         } else if (m.st === 'dive') {
           m.dive += dt; const dx = m.tx - m.x, dy = m.ty - m.y, L = Math.hypot(dx, dy) || 1;
-          m.x += dx / L * 470 * dt; m.y += dy / L * 470 * dt;
+          m.x += dx / L * 470 * diff.speed * dt; m.y += dy / L * 470 * diff.speed * dt;
           if (Math.random() < dt * 40) g.parts.push({ k: 'dust', x: m.x, y: m.y, vx: 0, vy: 0, life: .3, t: 0, s: 10, rot: 0, vr: 0, c: 0 });
           if (L < 30 || m.dive > 1.1) { m.st = 'return'; }
         } else {
           const dx = m.hx - m.x, dy = m.hy - m.y, L = Math.hypot(dx, dy) || 1;
-          m.x += dx / L * 220 * dt; m.y += dy / L * 220 * dt;
-          if (L < 14) { m.st = 'hover'; m.cd = 2 + Math.random() * 1.5; m.t = Math.asin(0); }
+          m.x += dx / L * 220 * diff.speed * dt; m.y += dy / L * 220 * diff.speed * dt;
+          if (L < 14) { m.st = 'hover'; m.cd = (2 + Math.random() * 1.5) * diff.rest; m.t = Math.asin(0); }
         }
         m.vx = (m.x - prevX) / Math.max(dt, .0001); m.vy = (m.y - prevY) / Math.max(dt, .0001);
         m.bank += ((Math.max(-1, Math.min(1, m.vx / 400))) - m.bank) * Math.min(1, dt * 10);
@@ -822,7 +834,7 @@ const Solar = (() => {
     }
     // corações
     for (const h of g.hearts) {
-      if (h.got || g.hp >= MAXHP || g.dead) continue;
+      if (h.got || g.hp >= diff.hp || g.dead) continue;
       if (Math.hypot(g.x - h.x, (g.y - 55) - h.y) < 55) { h.got = true; g.hp++; Sound.power(); popup('+1 vida', h.x, h.y - 40, '#ffb0b8'); stars(h.x, h.y, 6); }
     }
   }
@@ -934,7 +946,7 @@ const Solar = (() => {
         const moving = (m.mode === 'patrol') ? 1 : 0, ph = m.stride * 5.2;
         let sqx = 1, sqy = 1, lean = 0, shakeX = 0, lift = 0, armA = 0, armB = 0;
         if (moving) { sqy = 1 + Math.sin(ph * 2) * .035; sqx = 2 - sqy; lift = Math.abs(Math.sin(ph)) * 4; lean = Math.sin(ph) * .04; armA = Math.sin(ph) * .45; armB = -armA; }
-        else if (wind) { const t = Math.min(1, 1 - m.windT / .5); sqy = 1 - .2 * t; sqx = 1 + .16 * t; shakeX = Math.sin(m.t * 70) * 2.2; armA = -.9 * t; armB = -.9 * t; lean = -.1 * t; }
+        else if (wind) { const t = Math.min(1, 1 - m.windT / (.5 * diff.wind)); sqy = 1 - .2 * t; sqx = 1 + .16 * t; shakeX = Math.sin(m.t * 70) * 2.2; armA = -.9 * t; armB = -.9 * t; lean = -.1 * t; }
         else if (lunge) { sqx = 1.2; sqy = .86; lean = .22; armA = -1.5; armB = -1.5; lift = 6; }
         else if (rest) { sqy = 1 + Math.sin(m.t * 18) * .045; sqx = 2 - sqy; armA = .25; armB = .25; lean = -.04; }
         else if (hurt) { sqx = .88; sqy = 1.16; lean = -.18; shakeX = Math.sin(m.t * 50) * 3; armA = .9; armB = .9; }
@@ -1165,10 +1177,11 @@ const Solar = (() => {
 
   function outline(ctx, t, x, y, fill, w) { ctx.lineWidth = w || 6; ctx.strokeStyle = '#08150f'; ctx.fillStyle = fill || '#fff'; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }
   function drawHud(ctx) {
-    for (let i = 0; i < MAXHP; i++) {
-      const im = i < g.hp ? imgs.heart : imgs.heartEmpty, pt = g.pulse && g.pulse[i] !== undefined ? Math.max(0, 1 - (g.t - g.pulse[i]) / .4) : 0, k = 1 + .55 * pt, w = 34 * k, h = 34 * im.height / im.width * k;
+    const heartStep = Math.min(38, 190 / diff.hp), heartSize = heartStep - 4;
+    for (let i = 0; i < diff.hp; i++) {
+      const im = i < g.hp ? imgs.heart : imgs.heartEmpty, pt = g.pulse && g.pulse[i] !== undefined ? Math.max(0, 1 - (g.t - g.pulse[i]) / .4) : 0, k = 1 + .55 * pt, w = heartSize * k, h = heartSize * im.height / im.width * k;
       if (pt > 0) { ctx.save(); ctx.shadowColor = '#b8ffcf'; ctx.shadowBlur = 16 * pt; }
-      ctx.drawImage(im, 84 + i * 38 + 17 - w / 2, 20 + 17 * im.height / im.width - h / 2, w, h);
+      ctx.drawImage(im, 84 + i * heartStep + heartSize / 2 - w / 2, 20 + heartSize / 2 * im.height / im.width - h / 2, w, h);
       if (pt > 0) ctx.restore();
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = "700 15px 'Fredoka',sans-serif";
@@ -1187,9 +1200,10 @@ const Solar = (() => {
     ctx.drawImage(fr, VW - 150 - fr.width * k0, 16, fr.width * k0, fr.height * k0);
     ctx.font = "700 30px 'Fredoka',sans-serif"; outline(ctx, `× ${g.kills}`, VW - 24, 38, '#9ff3ff');
     ctx.font = "700 16px 'Fredoka',sans-serif"; outline(ctx, `🪙 ${getCoins()}`, VW - 24, 68, '#fff3b0', 4);
+    outline(ctx, diff.name, VW - 24, 92, '#fff', 4);
     // barra de vida do boss
     if (g.boss && g.bossBar > 0.02) {
-      const b = g.boss, w = 680, h = 30, x = (VW - w) / 2, y = 38 - (1 - g.bossBar) * 90, r = Math.max(0, b.hp / BOSS_HP);
+      const b = g.boss, w = 680, h = 30, x = (VW - w) / 2, y = 38 - (1 - g.bossBar) * 90, r = Math.max(0, b.hp / diff.bossHp);
       ctx.save(); ctx.globalAlpha = Math.min(1, g.bossBar * 1.4);
       ctx.fillStyle = '#17120a'; ctx.beginPath(); ctx.roundRect(x - 6, y - 6, w + 12, h + 12, 12); ctx.fill();
       ctx.strokeStyle = '#f2b632'; ctx.lineWidth = 3; ctx.stroke();
@@ -1227,6 +1241,6 @@ const Solar = (() => {
 
   return {
     load, start, stop, update, draw, togglePause, primary, restartAll,
-    isRunning: () => running, canRain, leave, canExit: () => !!g && g.ended && g.phase === 'win', setDebug: v => { debug = v; }, _debug: () => g, WORLD_W, PITCH, ARENA_TRIGGER, GY, PLATS, cleared,
+    DIFFS, best, isRunning: () => running, canRain, leave, canExit: () => !!g && g.ended && g.phase === 'win', setDebug: v => { debug = v; }, _debug: () => g, WORLD_W, PITCH, ARENA_TRIGGER, GY, PLATS, cleared,
   };
 })();

@@ -22,6 +22,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || req.headers.has('range')) return;
   const url = new URL(req.url);
+  if (url.pathname.startsWith('/api/')) return; // contas e presença precisam de dados atuais, nunca do cache offline
   const font = /(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname);
   if (url.origin !== location.origin && !font) return;
   if (req.mode === 'navigate') {                 // página: rede primeiro (pega a versão nova); sem internet usa o cache

@@ -22,12 +22,23 @@ const URL = process.argv[2] || 'http://localhost:8010';
     await page.keyboard.down(key); await page.waitForTimeout(350); await page.keyboard.up(key);
     r['voa:' + key] = await ev(() => Flow._debug().phase === 'play');
   }
+  // Testa a proteção no instante em que o overlay abre, sem depender da latência do navegador.
+  await ev(() => {
+    const overlay = document.getElementById('fOverlay');
+    const observer = new MutationObserver(() => {
+      if (!overlay.classList.contains('active')) return;
+      observer.disconnect();
+      dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+      dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ' }));
+      window.flowEarlySpaceIgnored = Flow._debug().ended;
+    });
+    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+  });
   await die();
   r.dicas = await ev(() => document.getElementById('fPrimaryKey').textContent === 'Espaço' && document.getElementById('fExitKey').textContent === 'Esc' && !document.getElementById('fExitKey').hidden);
   r.selecionaPrimeiro = await ev(() => document.getElementById('fPrimary').classList.contains('sel'));
   // Espaço logo após bater não reinicia (ainda está apertando para voar)
-  await page.keyboard.press('Space'); await page.waitForTimeout(100);
-  r.espacoCedoIgnorado = await ev(() => Flow._debug().ended);
+  r.espacoCedoIgnorado = await ev(() => window.flowEarlySpaceIgnored);
   await page.waitForTimeout(500);
   await page.keyboard.press('Space'); await page.waitForTimeout(200);
   r.espacoReinicia = await ev(() => !Flow._debug().ended && !Flow._debug().dead && !document.getElementById('fOverlay').classList.contains('active') && Flow._debug().phase === 'ready' && Flow._debug().score === 0);

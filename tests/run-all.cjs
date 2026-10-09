@@ -5,7 +5,7 @@ const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const url = process.argv[2] || 'http://localhost:8010';
-const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.cjs') && f !== 'account.test.cjs').sort();   // account.test.cjs precisa da API: rode à parte
+const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.cjs') && !['account.test.cjs', 'profile.test.cjs', 'ranking.test.cjs', 'multiplayer.test.cjs'].includes(f)).sort();   // testes de conta, ranking e multiplayer precisam da API: rode à parte
 const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });       // capturas de tela dos testes ficam aqui (ignorado pelo Git)
 let bad = 0;
 for (const f of files) {

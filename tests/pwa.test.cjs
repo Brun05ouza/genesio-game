@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, serviceWorkers: 'allow' });
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('http://localhost:8001/?sw=1'); await page.waitForFunction(() => ready);
+  await page.goto((process.argv[2] || 'http://localhost:8001') + '/?sw=1'); await page.waitForFunction(() => ready);
   const r = {};
   const mf = await page.evaluate(async () => { const l = document.querySelector('link[rel=manifest]'); const m = await (await fetch(l.href)).json(); const ok = []; for (const i of m.icons) ok.push((await fetch(new URL(i.src, l.href))).ok); return { m, ok }; });
   r.manifest = mf.m.display_override.includes('fullscreen') && mf.m.orientation === 'landscape' && mf.m.icons.length >= 3;
@@ -15,6 +15,7 @@ const assert = require('node:assert/strict');
   await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true), null, { timeout: 15000 });
   await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 15000 }).catch(async () => { await page.reload(); await page.waitForFunction(() => ready); });
   r.swActive = await page.evaluate(() => !!navigator.serviceWorker.controller);
+  r.apiForaDoCache = await page.evaluate(async () => { await fetch('/api/health').catch(() => {}); for (const key of await caches.keys()) for (const req of await (await caches.open(key)).keys()) if (new URL(req.url).pathname.startsWith('/api/')) return false; return true; });
   r.cached = await page.evaluate(async () => { const k = await caches.keys(); const c = await caches.open(k[0]); return (await c.keys()).length; });
   r.installHidden = await page.evaluate(() => document.getElementById('installBar').hidden);   // sem evento de instalação: não aparece
   await ctx.setOffline(true);

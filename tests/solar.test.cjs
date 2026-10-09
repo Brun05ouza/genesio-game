@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
   await page.evaluate(() => { levelId = 'teresopolis'; player.wx = 960; player.wy = 860; show('playing'); checkOasisSign(); });
   assert.equal(await page.locator('#prompt').getAttribute('class'), 'screen active');
   await page.locator('#btnYes').click();
+  await page.locator('#solarDiff-normal').click();
   await page.waitForFunction(() => state === 'splay');
   // Stop the display loop while advancing deterministic simulation ticks.
   const result = await page.evaluate(() => {

@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
   const visible = id => page.locator(id).isVisible();
   // 1) sair pela pausa, no meio da fase
   await page.evaluate(() => { levelId = 'teresopolis'; player.wx = 960; player.wy = 860; show('playing'); checkOasisSign(); });
-  await page.locator('#btnYes').click(); await page.waitForFunction(() => state === 'splay');
+  await page.locator('#btnYes').click(); await page.locator('#solarDiff-normal').click(); await page.waitForFunction(() => state === 'splay');
   await page.evaluate(() => { localStorage.removeItem('genesio-coins'); Solar._debug().kills = 3; });
   await page.keyboard.press('Escape');
   assert.ok(await visible('#sExit'), 'botão de sair aparece na pausa');
@@ -18,7 +18,7 @@ const assert = require('node:assert/strict');
   assert.equal(await page.evaluate(() => +localStorage.getItem('genesio-coins')), 6, 'moedas dos mobs derrotados');
   // 2) sair ao morrer na arena
   await page.evaluate(() => { player.wx = 960; player.wy = 860; promptBlocked = false; promptSign = null; checkOasisSign(); });
-  await page.locator('#btnYes').click(); await page.waitForFunction(() => state === 'splay');
+  await page.locator('#btnYes').click(); await page.locator('#solarDiff-normal').click(); await page.waitForFunction(() => state === 'splay');
   await page.evaluate(() => { state = 'test'; const g = Solar._debug(); g.arenaReached = true; g.hp = 0; g.dead = true; g.deadT = 2; Solar.update(.02); state = 'splay'; });
   assert.ok(await visible('#sExit'), 'botão de sair aparece ao perder');
   await page.locator('#sExit').click();

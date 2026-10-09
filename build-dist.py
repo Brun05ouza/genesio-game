@@ -11,7 +11,9 @@ from PIL import Image
 sys.stdout.reconfigure(encoding='utf-8')
 files = json.load(open('build-files.json', encoding='utf-8'))
 # arquivos do app instalável / carregador, que o rastreador de rede não enxerga
-EXTRA = ['assets/iguacu-loading.jpg', 'fase-solar-do-bosque/sprites/golem-portrait.png'] + sorted('frames/' + f for f in os.listdir('frames') if f.endswith('.png')) + ['fase-teresopolis/teresopolis-arco.png', 'fase-solar-do-bosque/sprites/nail.png', 'fase-solar-do-bosque/sprites/nail-box.png', 'fase-teresopolis/teresopolis-mapa.png', 'fase-teresopolis/teresopolis-colisao.png', 'map/lobby-mask.png', 'assets/lobby-loading.jpg', 'loader.js', 'talk.js', 'account.js', 'pwa.js', 'sw.js', 'manifest.webmanifest', 'favicon.ico'] + sorted('icons/' + f for f in os.listdir('icons') if f.endswith('.png'))
+EXTRA = sorted('assets/skins/' + f for f in os.listdir('assets/skins') if f.endswith('.png')) + ['assets/iguacu-loading.jpg', 'fase-solar-do-bosque/sprites/golem-portrait.png'] + sorted('frames/' + f for f in os.listdir('frames') if f.endswith('.png')) + ['fase-teresopolis/teresopolis-arco.png', 'fase-solar-do-bosque/sprites/nail.png', 'fase-solar-do-bosque/sprites/nail-box.png', 'fase-teresopolis/teresopolis-mapa.png', 'fase-teresopolis/teresopolis-colisao.png', 'map/lobby-mask.png', 'assets/lobby-loading.jpg', 'loader.js', 'talk.js', 'account.js', 'ranking.js', 'pwa.js', 'sw.js', 'manifest.webmanifest', 'favicon.ico'] + sorted('icons/' + f for f in os.listdir('icons') if f.endswith('.png'))
+EXTRA += sorted('assets/logos/' + f for f in os.listdir('assets/logos') if f.endswith('.png'))
+EXTRA += ['lobby.js']
 files = sorted((set(files) | set(EXTRA)) - {'fase-teresopolis/Isometric Modern Residential Complex.png', 'fase-teresopolis/water-mask.png'})   # o mapa antigo (com fundo azul) não vai mais
 
 LOSSLESS_HINT = ('mask', 'sheet')        # máscaras e a folha de sprites são lidas pixel a pixel: nunca com perdas
@@ -52,7 +54,8 @@ for name in out:
     open(p, 'w', encoding='utf-8').write(s)
 
 # versão do cache offline = resumo do conteúdo final; CORE = o que o jogo precisa para abrir
-h = hashlib.sha1()
+core = ['./'] + [n for n in out if n != 'sw.js' and (n.endswith(('.js', '.css', '.html', '.webmanifest', '.ico')) or n.startswith('icons/') or n.startswith('assets/menu') or n.startswith('assets/lobby') or n.startswith('assets/settings') or n in ('map/new-map.webp', 'map/lobby-mask.webp') or re.match(r'frames/(idle|walk|run|jump)\d+\.webp$', n))]
+h = hashlib.sha1(json.dumps(core).encode())
 for name in sorted(out): h.update(name.encode()); h.update(open(os.path.join('dist', name), 'rb').read())
 version = h.hexdigest()[:10]
 # index.html pede CSS/JS com ?v=versão: depois de publicar, a página nova nunca usa um CSS/JS velho guardado no aparelho
@@ -61,7 +64,6 @@ s = re.sub(r'(<link[^>]+href=")(?!https?:)([^"?]+\.css)(")', lambda m: m.group(1
 s = re.sub(r'(<script[^>]+src=")(?!https?:)([^"?]+\.js)(")', lambda m: m.group(1) + m.group(2) + '?v=' + version + m.group(3), s)
 open(p, 'w', encoding='utf-8').write(s)
 vq = lambda n: n + '?v=' + version if n.endswith(('.js', '.css')) and n != 'sw.js' else n
-core = ['./'] + [n for n in out if n != 'sw.js' and (n.endswith(('.js', '.css', '.html', '.webmanifest', '.ico')) or n.startswith('icons/') or n.startswith('assets/menu') or n.startswith('assets/lobby') or n.startswith('assets/settings'))]
 p = os.path.join('dist', 'sw.js'); s = open(p, encoding='utf-8').read()
 s = s.replace("const VERSION = 'dev';", "const VERSION = '%s';" % version).replace('const CORE = [];', 'const CORE = %s;' % json.dumps([vq(n) for n in core], ensure_ascii=False))
 open(p, 'w', encoding='utf-8').write(s)

@@ -93,6 +93,7 @@ const Nature = (() => {
 
   // ---- telas de pausa / fim ----
   function showOverlay(kind) {
+    el('nSettings').hidden = kind !== 'pause';
     const total = EPIS.length, n = g.got.size;
     let title, info;
     if (kind === 'pause') { title = 'Pausado'; info = `${n} de ${total} EPIs · faltam ${Math.ceil(g.timeLeft)} s no relógio`; }

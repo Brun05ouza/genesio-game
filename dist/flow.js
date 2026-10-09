@@ -91,7 +91,7 @@ const Flow = (() => {
   function hideOverlay() { el('fOverlay').classList.remove('active'); }
   // atalhos do menu: Espaço = principal (voar de novo / continuar), Esc = sair (na tela "Você bateu"), ↑/↓ escolhem o botão e Enter confirma
   let sel = 0, overlayAt = 0;
-  const btns = () => [el('fPrimary'), el('fExit')];
+  const btns = () => [el('fPrimary'), el('fSettings'), el('fExit')].filter(b => !b.hidden);
   function select(i) { sel = i; btns().forEach((b, k) => b.classList.toggle('sel', k === i)); }
   const overlayOpen = () => running && g && (g.paused || g.ended) && el('fOverlay').classList.contains('active');
   addEventListener('keydown', e => {
@@ -101,11 +101,12 @@ const Flow = (() => {
     if (!['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(k)) return;
     e.stopImmediatePropagation(); e.preventDefault();
     if (e.repeat) return;
-    if (k === 'ArrowUp' || k === 'KeyW') select(0);
-    else if (k === 'ArrowDown' || k === 'KeyS') select(1);
+    if (k === 'ArrowUp' || k === 'KeyW') select((sel - 1 + btns().length) % btns().length);
+    else if (k === 'ArrowDown' || k === 'KeyS') select((sel + 1) % btns().length);
     else if (ready) { for (const key in keys) keys[key] = false; (k === 'Space' ? el('fPrimary') : btns()[sel]).click(); }
   });
   function showOverlay(kind) {
+    el('fSettings').hidden = kind !== 'pause';
     el('fTitle').textContent = kind === 'pause' ? 'Pausado' : 'Você bateu!';
     el('fPrimaryTxt').textContent = kind === 'pause' ? 'Continuar' : 'Voar de novo';
     el('fPrimaryKey').textContent = kind === 'pause' ? 'Espaço' : 'Espaço';

@@ -5,7 +5,7 @@
 // Sem servidor (localhost, Netlify, sem internet e sem conta) o jogo segue como antes, salvando só no aparelho.
 const Account = (() => {
   const API = (window.GENESIO_API || '/api').replace(/\/$/, '');
-  const PROGRESS = /^genesio-(coins|best-(facil|normal|dificil)|nature-best-[a-z]+|climb-best|hop-best|flow-best|solar-cleared)$/;
+  const PROGRESS = /^genesio-(coins|best-(facil|normal|dificil)|nature-best-[a-z]+|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
   const SESSION_KEY = 'genesio-session';
   const $ = id => document.getElementById(id);
   const ls = window.localStorage;
@@ -14,7 +14,7 @@ const Account = (() => {
   const lsSet = (k, v) => { try { rawSet.call(ls, k, v); } catch (e) {} };
   const lsDel = k => { try { rawRemove.call(ls, k); } catch (e) {} };
 
-  let session = null;            // { token, name }
+  let session = null;            // { token, name, avatar }
   let pending = { coins: 0, scores: {} };
   let applying = false, flushTimer = null, flushing = false, online = null;
   try { session = JSON.parse(lsGet(SESSION_KEY) || 'null'); } catch (e) { session = null; }
@@ -54,6 +54,13 @@ const Account = (() => {
 
   // ---- aplica no aparelho o que está na conta (+ o que ainda não foi enviado) ----
   function applyProfile(p) {
+    if (session && p) {                                   // nome/foto podem ter mudado em outro aparelho
+      const oldKey = pendingKey();
+      if (p.name && p.name !== session.name) { session.name = p.name; lsDel(oldKey); savePending(); }
+      if (p.avatar) session.avatar = p.avatar;
+      if (p.skin) session.skin = p.skin;
+      lsSet(SESSION_KEY, JSON.stringify(session));
+    }
     applying = true;
     try {
       for (let i = ls.length - 1; i >= 0; i--) { const k = ls.key(i); if (k && PROGRESS.test(k)) lsDel(k); }   // nada de outra conta fica no aparelho
@@ -107,7 +114,7 @@ const Account = (() => {
       if (k === 'genesio-coins') carry.coins = +v || 0;
       else { const n = k === 'genesio-solar-cleared' ? (v === '1' ? 1 : 0) : (+v || 0); if (n > 0) carry.scores[k] = n; }
     }
-    session = { token, name: profile.name }; lsSet(SESSION_KEY, JSON.stringify(session));
+    session = { token, name: profile.name, avatar: profile.avatar || 'a', skin: profile.skin || 'classico' }; lsSet(SESSION_KEY, JSON.stringify(session));
     loadPending();
     pending.coins += carry.coins; Object.assign(pending.scores, carry.scores); savePending();
     applyProfile(profile);
@@ -195,5 +202,29 @@ const Account = (() => {
     if (online) openLogin(); else show('menu');      // sem servidor: joga sem conta (salva só no aparelho)
   }
 
-  return { gate, logout, flush, openLogin, isLogged: () => !!session, user: () => session && session.name, _pending: () => pending };
+  // ---- perfil: nome, foto e senha ----
+  async function updateProfile(fields) {
+    if (!session) return { error: 'Entre na sua conta primeiro.' };
+    try {
+      const r = await call('POST', '/profile', fields);
+      if (r.status === 200) { applyProfile(r.data.profile); return { ok: true, profile: r.data.profile }; }
+      if (r.status === 401) { expired(); return { error: 'Sua sessão expirou. Entre de novo.' }; }
+      return { error: r.data.error || 'Não foi possível salvar agora.' };
+    } catch (e) { return { error: 'Sem conexão com o servidor. Tente de novo.' }; }
+  }
+  async function changePassword(current, password) {
+    if (!session) return { error: 'Entre na sua conta primeiro.' };
+    try {
+      const r = await call('POST', '/password', { current, password });
+      if (r.status === 200) return { ok: true };
+      if (r.status === 401) { expired(); return { error: 'Sua sessão expirou. Entre de novo.' }; }
+      return { error: r.data.error || 'Não foi possível trocar a senha agora.' };
+    } catch (e) { return { error: 'Sem conexão com o servidor. Tente de novo.' }; }
+  }
+
+  return { gate, logout, flush, openLogin, updateProfile, changePassword, isLogged: () => !!session, user: () => session && session.name,
+    avatar: () => (session && session.avatar) || 'a', skin: () => (session && session.skin) || 'classico',
+    // imagem que representa a pessoa: a roupa escolhida, ou a foto do Genésio clássico
+    picture: () => { const s = session && session.skin; return s && s !== 'classico' ? 'assets/skins/' + s + '.png' : 'assets/menu-g-' + ((session && session.avatar) || 'a') + '.png'; },
+    token: () => session && session.token, _pending: () => pending };
 })();
