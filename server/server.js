@@ -1,7 +1,7 @@
 // API do Genésio: contas (nome + senha), moedas (GenesisCoins) e recordes. Banco: Postgres do Neon.
 // Sem dependências além do driver "pg". Variáveis (arquivo server/.env ou ambiente):
 //   DATABASE_URL   string de conexão do Neon (postgres://...?...sslmode=require). Sem ela, usa memória (só para testes).
-//   PORT           porta local (padrão 3005; o Nginx repassa /api/ para cá)
+//   PORT           porta local (padrão 3077; o Nginx repassa /api/ para cá)
 //   STATIC_DIR     opcional: também serve os arquivos do jogo (para testar tudo junto no computador)
 //   ALLOWED_ORIGIN opcional: outro domínio que pode chamar a API (ex.: o site no Netlify)
 //   DEV_DB         opcional, sem DATABASE_URL: arquivo onde o banco em memória é salvo (contas não somem ao reiniciar)
@@ -24,7 +24,7 @@ const arg = name => { const i = process.argv.indexOf('--' + name); return i > 0 
 if (arg('port')) process.env.PORT = arg('port');
 if (arg('static')) process.env.STATIC_DIR = arg('static');
 if (arg('db')) process.env.DEV_DB = arg('db');
-const PORT = +process.env.PORT || 3005;
+const PORT = +process.env.PORT || 3077;
 const STATIC_DIR = process.env.STATIC_DIR ? path.resolve(__dirname, process.env.STATIC_DIR) : null;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '';
 const SESSION_DAYS = 180;

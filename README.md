@@ -44,5 +44,5 @@ Sem a API no ar (Netlify, localhost só com arquivos, ou sem internet e sem cont
 
 - Configurar: copie `server/.env.example` para `server/.env` e coloque a `DATABASE_URL` do Neon. As tabelas são criadas sozinhas (`server/schema.sql`).
 - Rodar no computador: `iniciar.bat` (ou `node server/server.js --port 8000 --static .. --db dev-db.json`) → http://localhost:8000 com login. Sem `.env`, as contas ficam em `server/dev-db.json`.
-- VPS: `server/genesio-api.service` (systemd) e `server/nginx-api.conf` (rota `/api/` no Nginx).
+- VPS: `server/genesio-api.service` (systemd) e `server/nginx-site.conf` (site completo no Nginx: jogo, `/api/` na porta 3077 e HTTPS).
 - Teste: `node tests/account.test.cjs` (com a API em localhost:8002).
