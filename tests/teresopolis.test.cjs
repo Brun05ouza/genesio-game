@@ -36,11 +36,7 @@ const URL = process.argv[2] || 'http://localhost:8010';
     const ok = (x, y) => { for (let dx = -step; dx <= step; dx += step) for (let dy = -step; dy <= step; dy += step) if (seen.has(key(x + dx, y + dy))) return true; return false; };
     return { signs: SIGNS.filter(s => s.level === 'teresopolis').map(s => ok(s.x, s.y)), arch: [ok(655, 960), ok(760, 960)], plaza: ok(690, 480), cells: seen.size };
   });
-  r.placasAlcancaveis = reach.signs.length === 5 && reach.signs.every(Boolean);
-  r.cidadesEmBreve = await ev(() => {
-    const left = SIGNS.find(s => s.soon && s.dir === 'left'), right = SIGNS.find(s => s.soon && s.dir === 'right');
-    return left?.text === 'PETRÓPOLIS' && right?.text === 'NOVA FRIBURGO' && !signKind(left) && !signKind(right);
-  });
+  r.placasAlcancaveis = reach.signs.length === 3 && reach.signs.every(Boolean);
   r.arcoAlcancavel = reach.arch.every(Boolean);
   r.praçaAlcancavel = reach.plaza;
   // Percorre as rotas pelo resolvedor de movimento, incluindo esquinas perto das placas.

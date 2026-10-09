@@ -228,13 +228,13 @@ function drawMap() {
 // placas no chão (x/y = pé do poste). dir: sentido da seta
 const SIGNS = [
   { level: 'praca',  x: 548, y: 1085, text: 'NOVA IGUAÇU',       dir: 'down', w: 118 },
+  { level: 'praca', x: 355, y: 700, text: 'NOVA FRIBURGO', dir: 'left', w: 156, ss: 0.85, soon: true },
+  { level: 'praca', x: 900, y: 700, text: 'PETRÓPOLIS', dir: 'right', w: 156, ss: 0.85, soon: true },
   { level: 'iguacu', x: 630, y: 535,  text: 'OÁSIS RESIDENCIAL', dir: 'up',   w: 150, oasis: true },
   // Teresópolis: Nature e Solar do Bosque à frente do Genésio; Flow Residencial na rua de trás
   { level: 'teresopolis', x: 570, y: 460, text: 'NATURE',            dir: 'up',   w: 76,  ss: 0.68, nature: true },   // rotatória, subindo a rua central
   { level: 'teresopolis', x: 960, y: 860, text: 'SOLAR DO BOSQUE',   dir: 'up',   w: 142, ss: 0.68, solar: true },   // rua principal, à direita do cruzamento
   { level: 'teresopolis', x: 470, y: 850, text: 'FLOW RESIDENCIAL',  dir: 'up',   w: 152, ss: 0.68, flow: true },   // rua da esquerda, perto do arco
-  { level: 'teresopolis', x: 190, y: 720, text: 'PETRÓPOLIS', dir: 'left', w: 156, ss: 0.85, soon: true },
-  { level: 'teresopolis', x: 1260, y: 850, text: 'NOVA FRIBURGO', dir: 'right', w: 156, ss: 0.85, soon: true },
 ];
 // portal de pedra "Teresópolis" na rua de cima do lobby (x/y = centro da base). solid = trechos (fração da largura) onde há pedra no chão
 const GATES = [

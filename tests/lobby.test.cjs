@@ -8,10 +8,18 @@ const URL = process.argv[2] || 'http://localhost:8010';
   const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   await page.goto(URL); await page.waitForFunction(() => ready);
+  await page.waitForFunction(() => ['login', 'menu'].includes(state));
+  if (await page.evaluate(() => state === 'login')) await page.click('#acGuest');
   const ev = (f, a) => page.evaluate(f, a);
   const r = {};
   await ev(() => { show('playing'); });
   r.maskLoaded = await ev(() => !!walkMask && walkMask.w === mapImg.width && walkMask.h === mapImg.height);
+  r.cidadesEmBreveNoLobby = await ev(() => {
+    const signs = SIGNS.filter(s => s.soon);
+    return signs.length === 2 && signs.every(s => s.level === 'praca' && canWalk(s.x, s.y) && !signKind(s))
+      && signs.find(s => s.dir === 'left')?.text === 'NOVA FRIBURGO'
+      && signs.find(s => s.dir === 'right')?.text === 'PETRÓPOLIS';
+  });
 
   // pontos que precisam ser pisáveis: partida, retornos de Nova Iguaçu/Teresópolis, placa de Nova Iguaçu, ruas, praça
   const ok = await ev(() => [[627, 780], [630, 1200], [627, 222], [548, 1085], [627, 1000], [627, 600 + 80], [400, 540], [850, 540], [627, 330], [300, 560], [1000, 560], [380, 330], [470, 700]].map(([x, y]) => canWalk(x, y)));
