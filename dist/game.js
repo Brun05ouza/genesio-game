@@ -447,6 +447,7 @@ let state = 'loading', started = false;
 function show(name) {
   if (name !== 'talk' && typeof Talk !== 'undefined' && Talk.isActive()) Talk.skip();      // saiu da conversa por outro caminho (menu, etc.)
   state = name;
+  if ((name === 'playing' || name === 'menu' || name === 'nature') && typeof Account !== 'undefined') Account.runEnd();   // saiu da fase: a partida acabou
   document.body.classList.toggle('on-login', name === 'login' || name === 'profile');
   document.body.classList.toggle('hop-choice', name === 'hopMode');
   if (typeof refreshProfileCard === 'function') refreshProfileCard();
@@ -802,7 +803,7 @@ async function loadWithScreen(title, starter, onOk, onBack, art) {
   onOk();
 }
 async function beginRun(diff) {
-  await loadWithScreen('Oásis Residencial', () => Runner.start(diff), () => show('runner'), () => show('oasis'), { screen: 'iguacu', fill: 'iguacuFill', text: 'iguacuText', label: 'Preparando o Oásis Residencial...' });
+  await loadWithScreen('Oásis Residencial', () => Runner.start(diff), () => { Account.runStart('oasis'); show('runner'); }, () => show('oasis'), { screen: 'iguacu', fill: 'iguacuFill', text: 'iguacuText', label: 'Preparando o Oásis Residencial...' });
 }
 function exitRunner() { Runner.stop(); promptBlocked = true; show('playing'); }
 
@@ -826,7 +827,7 @@ function openNature() {
 }
 async function beginChallenge(id) {
   const mod = id === 'climb' ? Climb : id === 'hop' ? Hop : Nature;
-  await loadWithScreen('Nature', () => mod.start(id), () => show(id === 'climb' ? 'kplay' : id === 'hop' ? 'hplay' : 'nplay'), () => {
+  await loadWithScreen('Nature', () => mod.start(id), () => { Account.runStart(id === 'climb' ? 'climb' : id === 'hop' ? 'hop' : 'nature'); show(id === 'climb' ? 'kplay' : id === 'hop' ? 'hplay' : 'nplay'); }, () => {
     if (id === 'hop') { Hop.stop(); openHopMode(); } else show('nature');
   });
 }
@@ -880,7 +881,7 @@ document.querySelectorAll('[data-solar-diff]').forEach(b => click(b.id, () => be
 async function beginSolar(diff = 'normal') {
   if (state === 'lvload') return;
   const mode = Solar.DIFFS[diff] || Solar.DIFFS.normal;
-  await loadWithScreen('Solar do Bosque · ' + mode.name, () => Solar.start(mode.key), () => show('splay'), openSolarDifficulty);
+  await loadWithScreen('Solar do Bosque · ' + mode.name, () => Solar.start(mode.key), () => { Account.runStart('solar'); show('splay'); }, openSolarDifficulty);
 }
 click('sPrimary', () => { for (const k in keys) keys[k] = false; Solar.primary(); });
 click('sRestart', () => { for (const k in keys) keys[k] = false; Solar.restartAll(); });
@@ -888,7 +889,7 @@ click('sExit', () => { Solar.leave(); backToMap(); });
 // Flow Residencial (voo estilo Flappy Bird)
 async function beginFlow() {
   if (state === 'lvload') return;
-  await loadWithScreen('Flow Residencial', () => Flow.start(), () => show('fplay'), () => backToMap());
+  await loadWithScreen('Flow Residencial', () => Flow.start(), () => { Account.runStart('flow'); show('fplay'); }, () => backToMap());
 }
 click('fPrimary', () => { for (const k in keys) keys[k] = false; Flow.primary(); });
 click('fExit', () => { Flow.stop(); backToMap(); });

@@ -16,7 +16,7 @@ const URL = process.argv[2] || 'http://localhost:8002';
     const out = [];
     for (let i = 1; i <= 12; i++) {
       const reg = await post('/register', { name: 'Rk' + tag + 'n' + i, password: '123456' });
-      await post('/progress', { coins: i * 300, scores: { 'genesio-flow-best': 1000 + i, 'genesio-best-normal': 90000 - i } }, reg.token);
+      await post('/_test/progress', { coins: i * 300, scores: { 'genesio-flow-best': 1000 + i, 'genesio-best-normal': 90000 - i } }, reg.token);
       out.push({ name: reg.profile.name, token: reg.token });
     }
     return out;

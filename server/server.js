@@ -12,6 +12,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createLobby } = require('./lobby');
+const anticheat = require('./anticheat');
 
 // ---- .env simples (chave=valor por linha) ----
 try {
@@ -34,7 +35,7 @@ const SESSION_DAYS = 180;
 const NAME_RE = /^[\p{L}\p{N} _.\-]{3,20}$/u;            // 3 a 20: letras (com acento), números, espaço, _ . -
 const SCORE_KEY_RE = /^genesio-(best-(facil|normal|dificil)|nature-best-[a-z]+|nature-time-epi|climb-best|hop-best|flow-best|solar-best(-(facil|normal|dificil))?|solar-cleared)$/;
 const isTimeScore = key => key === 'genesio-nature-time-epi';
-const MAX_COINS_PER_SYNC = 5000, MAX_SCORE = 10000000;
+const MAX_COINS_PER_SYNC = 5000;
 const AVATARS = ['a', 'b', 'c', 'd', 'e'];
 const SKINS = ['classico'];   // Novas profissões e coleção rara: em breve. Perfis já salvos são preservados.
 // roupas raras: só dá para vestir depois da conquista (o servidor confere com o que está salvo na conta)
@@ -65,7 +66,7 @@ const tokenHash = t => crypto.createHash('sha256').update(t).digest('hex');
 
 // ---- armazenamento: Postgres (Neon) ou memória ----
 function memoryStore(file) {
-  let users = [], sessions = new Map(), id = 0;
+  let users = [], sessions = new Map(), id = 0, runs = new Map();
   if (file) try {
     const d = JSON.parse(fs.readFileSync(file, 'utf8'));
     users = d.users || []; sessions = new Map(d.sessions || []); id = d.id || 0;
@@ -103,6 +104,14 @@ function memoryStore(file) {
       const pick = u => ({ name: u.name, avatar: u.avatar || 'a', skin: u.skin || 'classico', value: val(u) });
       return { top: rows.slice(0, limit).map(pick), me: me >= 0 ? { rank: me + 1, ...pick(rows[me]) } : null, total: rows.length };
     },
+    async startRun(uid, game, now) {
+      for (const r of runs.values()) if (r.uid === uid && !r.endedAt) r.endedAt = now;      // só uma partida aberta por vez
+      const r = { id: require('node:crypto').randomBytes(12).toString('hex'), uid, game, startedAt: now, endedAt: 0, coins: 0 };
+      runs.set(r.id, r); return r;
+    },
+    async getRun(rid, uid) { const r = runs.get(rid); return r && r.uid === uid ? r : null; },
+    async creditRun(rid, coins) { const r = runs.get(rid); if (r) r.coins += coins; },
+    async flag(uid, note) { const u = users.find(x => x.id === uid); if (u) { u.suspicious = (u.suspicious || 0) + 1; u.lastFlag = note; save(); } },
     async dropOtherSessions(uid, keep) { for (const [h, s] of sessions) if (s.uid === uid && h !== keep) sessions.delete(h); save(); },
     async addProgress(uid, coins, scores) {
       const u = users.find(x => x.id === uid); u.coins += coins;
@@ -158,6 +167,19 @@ function pgStore(url) {
       const pick = r => r && ({ name: r.name, avatar: r.avatar || 'a', skin: r.skin || 'classico', value: +r.value, ...(r.rank ? { rank: +r.rank } : {}) });
       return { top: top.map(r => { const p = pick(r); delete p.rank; return p; }), me: pick(me), total };
     },
+    async startRun(uid, game, now) {
+      await q('UPDATE runs SET ended_at = to_timestamp($2 / 1000.0) WHERE user_id = $1 AND ended_at IS NULL', [uid, now]);
+      const id = require('node:crypto').randomBytes(12).toString('hex');
+      await q('INSERT INTO runs (id, user_id, game, started_at) VALUES ($1, $2, $3, to_timestamp($4 / 1000.0))', [id, uid, game, now]);
+      if (Math.random() < 0.02) q("DELETE FROM runs WHERE started_at < now() - interval '2 days'").catch(() => {});   // limpeza de vez em quando
+      return { id, uid, game, startedAt: now, endedAt: 0, coins: 0 };
+    },
+    async getRun(rid, uid) {
+      const r = (await q('SELECT id, user_id, game, extract(epoch from started_at) * 1000 AS s, extract(epoch from ended_at) * 1000 AS e, coins FROM runs WHERE id = $1 AND user_id = $2', [rid, uid])).rows[0];
+      return r && { id: r.id, uid: r.user_id, game: r.game, startedAt: +r.s, endedAt: r.e ? +r.e : 0, coins: +r.coins };
+    },
+    async creditRun(rid, coins) { await q('UPDATE runs SET coins = coins + $2 WHERE id = $1', [rid, coins]); },
+    async flag(uid, note) { await q('UPDATE users SET suspicious = suspicious + 1, last_flag = $2 WHERE id = $1', [uid, String(note).slice(0, 500)]); },
     async dropOtherSessions(uid, keep) { await q('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [uid, keep]); },
     async addProgress(uid, coins, scores) {
       const c = await pool.connect();
@@ -182,6 +204,16 @@ function limited(ip) {
   const now = Date.now(), t = (tries.get(ip) || []).filter(x => now - x < 10 * 60e3);
   t.push(now); tries.set(ip, t); return t.length > 30;
 }
+
+// limites por usuário: partidas novas e envios de progresso
+const userHits = new Map();
+function hits(key, windowMs, max) {
+  if (process.env.NO_RATE_LIMIT === '1') return false;
+  const now = Date.now(), t = (userHits.get(key) || []).filter(x => now - x < windowMs);
+  t.push(now); userHits.set(key, t); return t.length > max;
+}
+const limitedRuns = uid => hits('run:' + uid, 3600e3, 240);
+const limitedProgress = uid => hits('prog:' + uid, 60e3, 30);
 
 // ---- HTTP ----
 function send(res, code, obj, origin) {
@@ -274,17 +306,43 @@ const routes = {
     lobby.closeOthers(u.id, m[1]);
     return [200, { ok: true }];
   },
+  // início de uma partida: o servidor anota a hora (os limites de moedas e recordes dependem do tempo de jogo)
+  'POST /api/run': async (req, body) => {
+    const u = await authUser(req); if (!u) return [401, { error: 'Sessão expirada. Entre de novo.' }];
+    const game = String(body.game || '');
+    if (!anticheat.isGame(game)) return [400, { error: 'Fase inválida.' }];
+    if (limitedRuns(u.id)) return [429, { error: 'Muitas partidas seguidas. Espere um pouco.' }];
+    const run = await store.startRun(u.id, game, Date.now());
+    return [200, { run: run.id }];
+  },
+  // moedas e recordes de uma partida: só o que é possível no tempo que ela durou é creditado
   'POST /api/progress': async (req, body) => {
     const u = await authUser(req); if (!u) return [401, { error: 'Sessão expirada. Entre de novo.' }];
-    const coins = Math.max(0, Math.min(MAX_COINS_PER_SYNC, Math.floor(+body.coins || 0)));
-    const scores = {};
-    for (const [k, v] of Object.entries(body.scores || {})) {
-      const n = Math.floor(+v);
-      if (SCORE_KEY_RE.test(k) && n > 0 && n <= (isTimeScore(k) ? 60000 : MAX_SCORE)) scores[k] = k === 'genesio-solar-cleared' ? 1 : n;
+    if (limitedProgress(u.id)) return [429, { error: 'Muitos envios seguidos.' }];
+    const now = Date.now(), rid = String(body.run || '');
+    const run = /^[a-f0-9]{24}$/.test(rid) ? await store.getRun(rid, u.id) : null;
+    if (!run || !anticheat.runOpen(run, now)) {
+      if (+body.coins > 0 || Object.keys(body.scores || {}).length) await store.flag(u.id, 'envio sem partida aberta: ' + JSON.stringify({ coins: body.coins, scores: body.scores }).slice(0, 300));
+      return [409, { error: 'Partida encerrada.', profile: await store.profile(u.id) }];
     }
-    await store.addProgress(u.id, coins, scores);
-    return [200, { profile: await store.profile(u.id) }];
+    const scores = {};
+    for (const [k, v] of Object.entries(body.scores || {})) if (SCORE_KEY_RE.test(k)) scores[k] = v;
+    const ok = anticheat.check(run, now, Math.min(MAX_COINS_PER_SYNC, Math.floor(+body.coins || 0)), scores);
+    if (ok.rejected.length) {
+      console.warn(new Date().toISOString(), 'TRAPAÇA?', u.name, run.game, ok.rejected.join('; '));
+      await store.flag(u.id, run.game + ': ' + ok.rejected.join('; '));
+    }
+    if (ok.coins) await store.creditRun(run.id, ok.coins);
+    await store.addProgress(u.id, ok.coins, ok.scores);
+    return [200, { profile: await store.profile(u.id), credited: ok.coins, rejected: ok.rejected.length }];
   },
+};
+// só nos testes automáticos (banco em memória + NO_RATE_LIMIT=1): grava progresso direto, sem partida, para montar rankings de teste
+if (!process.env.DATABASE_URL && process.env.NO_RATE_LIMIT === '1') routes['POST /api/_test/progress'] = async (req, body) => {
+  const u = await authUser(req); if (!u) return [401, {}];
+  const scores = {}; for (const [k, v] of Object.entries(body.scores || {})) if (SCORE_KEY_RE.test(k) && +v > 0) scores[k] = Math.floor(+v);
+  await store.addProgress(u.id, Math.max(0, Math.floor(+body.coins || 0)), scores);
+  return [200, { profile: await store.profile(u.id) }];
 };
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };

@@ -26,4 +26,16 @@ CREATE TABLE IF NOT EXISTS sessions (
   last_seen  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+-- partidas: o servidor anota o início para validar moedas e recordes pelo tempo de jogo (anti-trapaça)
+CREATE TABLE IF NOT EXISTS runs (
+  id         text PRIMARY KEY,
+  user_id    integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  game       text NOT NULL,
+  started_at timestamptz NOT NULL DEFAULT now(),
+  ended_at   timestamptz,
+  coins      integer NOT NULL DEFAULT 0          -- moedas já creditadas nesta partida
+);
+CREATE INDEX IF NOT EXISTS runs_user ON runs(user_id, ended_at);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspicious integer NOT NULL DEFAULT 0;   -- envios recusados pelo anti-trapaça
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_flag text;
 CREATE INDEX IF NOT EXISTS scores_ranking ON scores(key, value DESC);   -- ranking por empreendimento

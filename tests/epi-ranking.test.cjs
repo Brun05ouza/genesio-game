@@ -11,13 +11,13 @@ const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
   const suffix = Date.now().toString().slice(-7), players = [];
   for (const [i, time] of [21000, 15000, 18000, 15000].entries()) {
     const p = await api('/register', null, { name: 'Epi' + suffix + i, password: 'teste123' }); players.push(p);
-    await api('/progress', p.token, { scores: { [KEY]: time, 'genesio-nature-best-epi': 8 } });
+    await api('/_test/progress', p.token, { scores: { [KEY]: time, 'genesio-nature-best-epi': 8 } });
   }
-  await api('/progress', players[1].token, { scores: { [KEY]: 30000 } });
+  await api('/_test/progress', players[1].token, { scores: { [KEY]: 30000 } });
   assert.equal((await api('/me', players[1].token)).profile.scores[KEY], 15000);
-  await api('/progress', players[0].token, { scores: { [KEY]: 13000 } });
-  await api('/progress', players[2].token, { scores: { [KEY]: 0 } });
-  await api('/progress', players[2].token, { scores: { [KEY]: 70000 } });
+  await api('/_test/progress', players[0].token, { scores: { [KEY]: 13000 } });
+  await api('/_test/progress', players[2].token, { scores: { [KEY]: 0 } });
+  await api('/_test/progress', players[2].token, { scores: { [KEY]: 70000 } });
   const rank = await api('/ranking?key=' + KEY, players[2].token);
   assert.deepEqual(rank.top.filter(p => p.name.startsWith('Epi' + suffix)).map(p => p.value), [13000, 15000, 15000, 18000]);
   assert.ok(rank.me.rank > rank.top.findIndex(p => p.name === players[0].profile.name) + 1);
@@ -28,8 +28,10 @@ const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
     const page = await ctx.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto(URL); await page.waitForFunction(() => ready && state === 'menu' && Nature.bestTime() === 13000);
     assert.equal(await page.evaluate(() => Nature.bestTime()), 13000);
+    // uma partida do Nature: o tempo só vale se a partida durou pelo menos isso (anti-trapaça); espera 13 s de "jogo"
+    await page.evaluate(() => Account.runStart('nature')); await page.waitForTimeout(13000);
     await page.evaluate(() => { localStorage.setItem('genesio-nature-time-epi', 16000); localStorage.setItem('genesio-nature-time-epi', 12000); localStorage.setItem('genesio-nature-time-epi', 14000); });
-    assert.equal(await page.evaluate(() => Account._pending().scores['genesio-nature-time-epi']), 12000);
+    assert.equal(await page.evaluate(() => Object.values(Account._pending().runs).find(r => r.game === 'nature').scores['genesio-nature-time-epi']), 12000);
     await page.evaluate(() => Account.flush()); assert.equal((await api('/me', players[0].token)).profile.scores[KEY], 12000);
     await page.reload(); await page.waitForFunction(() => ready && state === 'menu' && Nature.bestTime() === 12000);
     assert.equal(await page.evaluate(() => Nature.bestTime()), 12000);

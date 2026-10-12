@@ -20,7 +20,7 @@ const NOAPI = process.argv[3] || URL; // URL opcional sem API; por padrão simul
   await p1.goto(URL); await p1.waitForFunction(() => ready);
   await p1.waitForFunction(() => state === 'login', null, { timeout: 8000 });
   r.abreNoLogin = true;
-  // jogou sem conta antes: esse progresso vai junto para a conta nova
+  // jogou sem conta antes: esse progresso NÃO vai para a conta (não dá para conferir; é a porta mais fácil para trapaça)
   await p1.evaluate(() => { localStorage.setItem('genesio-coins', '7'); localStorage.setItem('genesio-flow-best', '12'); });
   await p1.click('#acTabNew');
   await p1.fill('#acName', 'ab'); await p1.fill('#acPass', '123456'); await p1.fill('#acPass2', '123456'); await p1.click('#acSubmit');
@@ -37,31 +37,33 @@ const NOAPI = process.argv[3] || URL; // URL opcional sem API; por padrão simul
   await p1.waitForTimeout(1200);
   const token = await p1.evaluate(() => JSON.parse(localStorage.getItem('genesio-session')).token);
   let me = await api(p1, 'GET', '/me', null, token);
-  r.progressoSemContaFoiJunto = me.data.profile.coins === 7 && me.data.profile.scores['genesio-flow-best'] === 12;
+  r.progressoDeVisitanteNaoEntra = me.data.profile.coins === 0 && !me.data.profile.scores['genesio-flow-best'];
   // nome repetido (sem diferenciar maiúsculas)
   const dup = await api(p1, 'POST', '/register', { name: name.toUpperCase(), password: 'abcdef' });
   r.nomeRepetido = dup.status === 409;
 
   // ---- joga: ganha moedas e bate recordes (como as fases fazem) ----
-  await p1.evaluate(() => {
-    localStorage.setItem('genesio-coins', (+localStorage.getItem('genesio-coins') || 0) + 100);   // ex.: Nature
-    localStorage.setItem('genesio-best-normal', '2500');                                          // Oásis
-    localStorage.setItem('genesio-climb-best', '33');
-    localStorage.setItem('genesio-solar-cleared', '1');
-    localStorage.setItem('genesio-solar-best-facil', '1800');
-    localStorage.setItem('genesio-solar-best-dificil', '1500');
-  });
-  await p1.waitForTimeout(2500);
+  // cada fase abre uma partida; o servidor só aceita o que é possível no tempo jogado
+  const play = async (game, secs, fn) => { await p1.evaluate(g => Account.runStart(g), game); await p1.waitForTimeout(secs * 1000); await p1.evaluate(fn); await p1.waitForTimeout(2200); };
+  // fora de uma partida (ex.: editando os dados no console): nada é enviado
+  await p1.evaluate(() => localStorage.setItem('genesio-coins', 99999)); await p1.waitForTimeout(2200);
   me = await api(p1, 'GET', '/me', null, token);
-  r.sincronizou = me.data.profile.coins === 107 && me.data.profile.scores['genesio-best-normal'] === 2500 && me.data.profile.scores['genesio-climb-best'] === 33 && me.data.profile.scores['genesio-solar-cleared'] === 1;
+  r.foraDePartidaNaoEnvia = me.data.profile.coins === 0;
+  await play('nature', 9.5, () => localStorage.setItem('genesio-coins', (+localStorage.getItem('genesio-coins') || 0) + 100));
+  await play('oasis', 11, () => localStorage.setItem('genesio-best-normal', '2500'));
+  await play('climb', 3, () => localStorage.setItem('genesio-climb-best', '33'));
+  await play('solar', 20.5, () => { localStorage.setItem('genesio-solar-best-facil', '1800'); localStorage.setItem('genesio-solar-best-dificil', '1500'); });
+  me = await api(p1, 'GET', '/me', null, token);
+  r.sincronizou = me.data.profile.coins === 100 && me.data.profile.scores['genesio-best-normal'] === 2500 && me.data.profile.scores['genesio-climb-best'] === 33;
   r.dificuldadesSolarSincronizadas = me.data.profile.scores['genesio-solar-best-facil'] === 1800 && me.data.profile.scores['genesio-solar-best-dificil'] === 1500;
   // recorde menor não apaga o maior
-  await p1.evaluate(() => localStorage.setItem('genesio-best-normal', '10')); await p1.waitForTimeout(2200);
+  await p1.evaluate(() => Account.runStart('oasis')); await p1.evaluate(() => localStorage.setItem('genesio-best-normal', '10')); await p1.waitForTimeout(2200);
   me = await api(p1, 'GET', '/me', null, token);
   r.recordeSoAumenta = me.data.profile.scores['genesio-best-normal'] === 2500;
   // o Oásis soma as moedas coletadas nas GenesisCoins
   const before = me.data.profile.coins;
-  await p1.evaluate(async () => { await Runner.start('normal'); const g = Runner._debug(); g.coins = 5; g.phase = 'run'; g.lives = 1; g.dist = 3000; });
+  await p1.evaluate(async () => { await Runner.start('normal'); Account.runStart('oasis'); const g = Runner._debug(); g.coins = 5; g.phase = 'run'; g.lives = 1; g.dist = 3000; });
+  await p1.waitForTimeout(1500);
   await p1.evaluate(() => { const g = Runner._debug(); g.lives = 0; g.phase = 'dying'; g.deadT = 9; state = 'test'; for (let i = 0; i < 30; i++) Runner.update(1 / 60); Runner.stop(); show('menu'); });
   await p1.waitForTimeout(2200);
   me = await api(p1, 'GET', '/me', null, token);
@@ -79,9 +81,11 @@ const NOAPI = process.argv[3] || URL; // URL opcional sem API; por padrão simul
   r.senhaErrada = true;
   await p2.fill('#acPass', '123456'); await p2.locator('#acSubmit').tap();
   await p2.waitForFunction(() => state === 'menu', null, { timeout: 8000 });
-  r.outroAparelho = await p2.evaluate(c => +localStorage.getItem('genesio-coins') === c && +localStorage.getItem('genesio-best-normal') === 2500 && localStorage.getItem('genesio-solar-cleared') === '1', me.data.profile.coins);
+  r.outroAparelho = await p2.evaluate(c => +localStorage.getItem('genesio-coins') === c && +localStorage.getItem('genesio-best-normal') === 2500 && +localStorage.getItem('genesio-solar-best-facil') === 1800, me.data.profile.coins);
   // os dois aparelhos ganhando moedas ao mesmo tempo: nada se perde
-  await p1.evaluate(() => localStorage.setItem('genesio-coins', (+localStorage.getItem('genesio-coins')) + 10));
+  await p1.evaluate(() => Account.runStart('climb')); await p1.waitForTimeout(400);
+  await p1.evaluate(() => localStorage.setItem('genesio-coins', (+localStorage.getItem('genesio-coins')) + 10)); await p1.waitForTimeout(2200);
+  await p2.evaluate(() => Account.runStart('climb')); await p2.waitForTimeout(400);
   await p2.evaluate(() => localStorage.setItem('genesio-coins', (+localStorage.getItem('genesio-coins')) + 20));
   await p1.waitForTimeout(2500);
   const me2 = await api(p1, 'GET', '/me', null, token);

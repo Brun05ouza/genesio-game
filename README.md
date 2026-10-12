@@ -64,4 +64,6 @@ Sem a API no ar (Netlify, localhost só com arquivos, ou sem internet e sem cont
 - Configurar: copie `server/.env.example` para `server/.env` e coloque a `DATABASE_URL` do Neon. As tabelas são criadas sozinhas (`server/schema.sql`).
 - Rodar no computador: `iniciar.bat` (ou `node server/server.js --port 8000 --static .. --db dev-db.json`) → http://localhost:8000 com login. Sem `.env`, as contas ficam em `server/dev-db.json`.
 - VPS: `server/genesio-api.service` (systemd) e `server/nginx-site.conf` (site completo no Nginx: jogo, `/api/` na porta 3077 e HTTPS).
-- Teste: `node tests/account.test.cjs` (com a API em localhost:8002).
+- Teste: `node tests/account.test.cjs` e `node tests/anticheat.test.cjs` (com a API em localhost:8002).
+- Anti-trapaça: cada fase abre uma partida no servidor (`POST /api/run`) e o servidor só credita moedas e recordes possíveis no tempo jogado (`server/anticheat.js`). Progresso de visitante não vai para a conta. Envios recusados ficam marcados na conta.
+- Administração (no servidor, dentro de `server/`): `node admin.js suspeitos` (contas marcadas), `node admin.js top`, `node admin.js ver <id|nome>` e `node admin.js zerar <id> --sim`.
